@@ -1,0 +1,62 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+*.a
+
+# Build directories
+bin/
+build/
+
+# Go-specific
+*.test
+*.prof
+*.sum
+
+# Vendor directory (if not using Go Modules to manage dependencies)
+vendor/
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+*~
+
+# Logs and temporary files
+*.log
+*.tmp
+*.cache
+*.env
+.DS_Store
+Thumbs.db
+storage/logs/
+storage/cache/
+storage/views/
+
+# Coverage reports
+*.cover
+*.cov
+
+# Test results
+test-results/
+
+# OS-specific files
+*.DS_Store
+*.AppleDouble
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Configurations
+.env.local
+.env.production
+.env.staging
+.env.test
+
+# Docker
+docker-compose.override.yml
