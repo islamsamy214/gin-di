@@ -24,12 +24,6 @@ Clone the repository:
 git clone github.com/islamsamy214/gin-di
 ```
 
-To add **Gin DI Framework** to your project, run:
-
-```bash
-go get github.com/islamsamy214/gin-di
-```
-
 ---
 
 ## 🔧 Usage
