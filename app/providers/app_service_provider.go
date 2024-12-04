@@ -18,7 +18,7 @@ func NewAppServiceProvider() *AppServiceProvider {
 	container := core.NewContainer()
 
 	// Register services here
-	container.Bind("MyService", services.NewService())
+	container.Bind("MyService", services.NewMyService())
 
 	return &AppServiceProvider{container: container}
 }

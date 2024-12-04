@@ -2,7 +2,7 @@ package services
 
 type MyService struct{}
 
-func NewService() *MyService {
+func NewMyService() *MyService {
 	return &MyService{}
 }
 
