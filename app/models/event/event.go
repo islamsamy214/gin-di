@@ -1,4 +1,4 @@
-package models
+package event
 
 type Event struct {
 	ID        int64
@@ -6,4 +6,8 @@ type Event struct {
 	Date      string
 	CreatedAt string
 	UserId    int64
+}
+
+func NewEventModel() *Event {
+	return &Event{}
 }
