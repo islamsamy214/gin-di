@@ -2,6 +2,10 @@ package controllers
 
 type AuthController struct{}
 
+func NewAuthController() *AuthController {
+	return &AuthController{}
+}
+
 // func (*AuthController) Login(ctx *gin.Context) {
 // 	user := models.User{}
 // 	err := ctx.ShouldBindJSON(&user)
