@@ -11,40 +11,33 @@ type Migrate struct{}
 func (*Migrate) Up() {
 	log.Println("Creating migrations table")
 	// Initialize the service
-	sqliteService, err := core.NewSqliteService()
-	if err != nil {
-		log.Printf("Failed to initialize SqliteService: %v", err)
-	}
-	defer sqliteService.Close()
+	db, _ := core.NewSqliteService()
 
-	_, err = sqliteService.Create(`
+	result, _ := db.Create(`
 		CREATE TABLE IF NOT EXISTS migrations (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT,
-			batch INTEGER
+			batch INTEGER DEFAULT 1
 		);
 	`)
 
-	if err != nil {
-		log.Printf("Failed to create migrations table: %v", err)
+	if result == nil {
+		log.Println("Failed to create migrations table")
+	} else {
+		log.Println("Migrations table created")
 	}
-	log.Println("Migrations table created")
 }
 
 func (*Migrate) Down() {
 	log.Println("Dropping migrations table")
 	// Initialize the service
-	sqliteService, err := core.NewSqliteService()
-	if err != nil {
-		log.Printf("Failed to initialize SqliteService: %v", err)
-	}
-	defer sqliteService.Close()
+	db, _ := core.NewSqliteService()
 
-	_, err = sqliteService.Delete(`
-		DROP TABLE IF EXISTS migrations;
-	`)
+	result, _ := db.Create("DROP TABLE IF EXISTS migrations;")
 
-	if err != nil {
-		log.Printf("Failed to drop migrations table: %v", err)
+	if result == nil {
+		log.Println("Failed to drop migrations table")
+	} else {
+		log.Println("Migrations table dropped")
 	}
 }
