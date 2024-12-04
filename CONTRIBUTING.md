@@ -14,7 +14,7 @@ Thank you for considering contributing to **Gin DI Framework**! Your input helps
 Fork the repository on GitHub and clone it to your local machine.
 
 ```bash
-git clone https://github.com/your-username/gin-di.git
+git clone https://github.com/islamsamy214/gin-di.git
 cd gin-di
 ```
 
@@ -66,7 +66,7 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 1. Ensure you have [Go](https://go.dev/) installed on your machine.  
 2. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/gin-di.git
+   git clone https://github.com/islamsamy214/gin-di.git
    ```
 3. Install dependencies:
    ```bash

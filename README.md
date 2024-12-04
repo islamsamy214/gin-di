@@ -127,7 +127,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## ⭐ Support
 
 If you like this project, please give it a star ⭐! Your support means a lot!
-
----
-
-Let me know if you'd like me to create additional files like a `CONTRIBUTING.md` or `LICENSE.md`!
