@@ -12,7 +12,7 @@ func main() {
 
 	// Ensure at least one argument is provided
 	if len(args) < 2 {
-		fmt.Println("Usage: go run app/console/kernal.go <command>")
+		fmt.Println("Usage: go run app/console/kernel.go <command>")
 		os.Exit(1)
 	}
 
