@@ -2,18 +2,14 @@ package migrations
 
 import (
 	"log"
-	"os"
 	"web-app/app/services/core"
 )
 
 type UserTable struct{}
 
 func (*UserTable) Up() {
-	log.Println("Creating users table")
+	log.Println("Creating  table")
 	db, _ := core.NewSqliteService()
-
-	// get the file "Migration" name
-	migrationName := os.Args[1]
 
 	// Begin transaction
 	tx, _ := db.Begin()
@@ -34,7 +30,7 @@ func (*UserTable) Up() {
 	}
 
 	// Insert into migrations table
-	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES (?);`, migrationName)
+	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES ('users');`)
 	if err != nil {
 		tx.Rollback()
 		log.Printf("Failed to insert into migrations table: %v", err)
@@ -56,9 +52,6 @@ func (*UserTable) Down() {
 
 	db, _ := core.NewSqliteService()
 
-	// get the file "Migration" name
-	migrationName := os.Args[1]
-
 	// Begin transaction
 	tx, _ := db.Begin()
 
@@ -71,7 +64,7 @@ func (*UserTable) Down() {
 	}
 
 	// Delete from migrations table
-	_, err = tx.Exec(`DELETE FROM migrations WHERE name = ?;`, migrationName)
+	_, err = tx.Exec(`DELETE FROM migrations WHERE name = 'users';`)
 	if err != nil {
 		tx.Rollback()
 		log.Printf("Failed to delete from migrations table: %v", err)

@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"log"
-	"os"
 
 	"web-app/app/services/core"
 )
@@ -36,11 +35,8 @@ func (*EventTable) Up() {
 		return
 	}
 
-	// Get the migration name
-	migrationName := os.Args[1]
-
 	// Insert into migrations table
-	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES (?);`, migrationName)
+	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES ('events');`)
 	if err != nil {
 		tx.Rollback()
 		log.Printf("Failed to insert into migrations table: %v", err)
@@ -74,11 +70,8 @@ func (*EventTable) Down() {
 		return
 	}
 
-	// Get the migration name
-	migrationName := os.Args[1]
-
 	// Delete from migrations table
-	_, err = tx.Exec(`DELETE FROM migrations WHERE name = ?;`, migrationName)
+	_, err = tx.Exec(`DELETE FROM migrations WHERE name = 'events';`)
 	if err != nil {
 		tx.Rollback()
 		log.Printf("Failed to delete from migrations table: %v", err)
