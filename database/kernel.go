@@ -3,7 +3,7 @@ package database
 import "web-app/database/migrations"
 
 type kernel struct {
-	Migrations []migrations.Migration
+	Migrations map[string]migrations.Migration
 }
 
 /*
@@ -11,10 +11,12 @@ type kernel struct {
  */
 func NewKernel() *kernel {
 	dbKernel := &kernel{
-		Migrations: []migrations.Migration{
-			&migrations.Migrate{},
-			&migrations.UserTable{},
-			&migrations.EventTable{},
+		Migrations: map[string]migrations.Migration{
+			// Add all the migrations here
+			// "table_name": &migrations.MigrationStruct{},
+			"migrations": &migrations.Migrate{},
+			"users":      &migrations.UserTable{},
+			"events":     &migrations.EventTable{},
 		},
 	}
 
