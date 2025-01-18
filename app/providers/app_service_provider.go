@@ -4,29 +4,21 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"web-app/app/services"
-	"web-app/app/services/core"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AppServiceProvider struct {
-	container *core.Container
+	//
 }
 
 func NewAppServiceProvider() *AppServiceProvider {
-	container := core.NewContainer()
-
-	// Register services here
-	container.Bind("MyService", services.NewMyService())
-
-	return &AppServiceProvider{container: container}
+	return &AppServiceProvider{}
 }
 
 func (s *AppServiceProvider) Register() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// Set the container in the request context
-		ctx.Set("container", s.container)
+		// Register the app service provider middleware "As a global middleware"
 		ctx.Next() // Continue to the next middleware/handler
 	}
 }

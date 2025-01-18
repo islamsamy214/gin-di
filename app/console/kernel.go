@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"web-app/app/console/commands"
+	"web-app/app/providers"
 )
 
 /*
@@ -19,6 +20,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Load the .env file
+	(&providers.EnvServiceProvider{}).Boot()
+
+	// Gin's default logger to use our custom writer
+	(&providers.LogServiceProvider{}).Boot()
+
 	// Check if the first argument is "migrate"
 	if args[1] == "migrate" {
 		// get the flags --down
@@ -28,8 +35,10 @@ func main() {
 		}
 
 		commands.Migrate()
-	} else {
-		fmt.Printf("Unknown command: %s\n", args[1])
-		os.Exit(1)
+	}
+
+	// Check if the first argument is "seed"
+	if args[1] == "seed" {
+		commands.Seed()
 	}
 }
