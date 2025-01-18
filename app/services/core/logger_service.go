@@ -11,6 +11,10 @@ import (
 
 type Logger struct{}
 
+func NewLogger() *Logger {
+	return &Logger{}
+}
+
 func (*Logger) SetupWriter() io.Writer {
 	dailyLogger := &lumberjack.Logger{
 		Filename:   "./storage/logs/" + os.Getenv("APP_NAME") + "-" + time.Now().Format("2006-01-02") + ".log",
