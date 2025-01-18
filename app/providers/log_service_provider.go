@@ -10,7 +10,7 @@ type LogServiceProvider struct{}
 
 func (l *LogServiceProvider) Boot() {
 	// Boot the logger service
-	multiWriter := (&core.Logger{}).SetupWriter()
+	multiWriter := (core.NewLogger()).SetupWriter()
 	gin.DefaultWriter = multiWriter
 	gin.DefaultErrorWriter = multiWriter
 }
