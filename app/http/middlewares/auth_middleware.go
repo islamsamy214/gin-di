@@ -12,7 +12,7 @@ func Authenticate(ctx *gin.Context) {
 
 	if token == "" {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "not authorized",
+			"message": "Unauthorized",
 		})
 		return
 	}
@@ -30,5 +30,6 @@ func Authenticate(ctx *gin.Context) {
 	}
 
 	ctx.Set("userId", claims.UserID)
+	ctx.Set("username", claims.Username)
 	ctx.Next()
 }
