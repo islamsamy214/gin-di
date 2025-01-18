@@ -1,9 +1,13 @@
 package database
 
-import "web-app/database/migrations"
+import (
+	"web-app/database/migrations"
+	"web-app/database/seeders"
+)
 
 type kernel struct {
 	Migrations map[string]migrations.Migration
+	Seeders    map[string]seeders.Seeder
 }
 
 /*
@@ -17,6 +21,13 @@ func NewKernel() *kernel {
 			"migrations": &migrations.Migrate{},
 			"users":      &migrations.UserTable{},
 			"events":     &migrations.EventTable{},
+		},
+
+		Seeders: map[string]seeders.Seeder{
+			// Add all the seeders here
+			// "table_name": &seeders.SeederStruct{},
+			"users":  &seeders.UserSeeder{},
+			"events": &seeders.EventSeeder{},
 		},
 	}
 
