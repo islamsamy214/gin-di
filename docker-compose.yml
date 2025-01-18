@@ -1,0 +1,66 @@
+services:
+    go_app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: 1000
+        image: 'web-app/go'
+        # deploy:
+        #     resources:
+        #         limits:
+        #             cpus: "1"
+        #             memory: 2048M
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-8000}:8000'
+        environment:
+            WWWUSER: 1000
+            GO_APP: 1
+            XDEBUG_MODE: '${APP_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${APP_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - go_app_net
+        # depends_on:
+        #     - pgsql
+    # pgsql:
+    #     image: 'postgres:17'
+    #     # deploy:
+    #     #     resources:
+    #     #         limits:
+    #     #             cpus: "1"
+    #     #             memory: 2048M
+    #     ports:
+    #         - '${FORWARD_DB_PORT:-5432}:5432'
+    #     environment:
+    #         PGPASSWORD: '${DB_PASSWORD:-secret}'
+    #         POSTGRES_DB: '${DB_DATABASE}'
+    #         POSTGRES_USER: '${DB_USERNAME}'
+    #         POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+    #     volumes:
+    #         - 'app-pgsql:/var/lib/postgresql/data'
+    #         - './vendor/laravel/app/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+    #     networks:
+    #         - go_app_net
+    #     healthcheck:
+    #         test:
+    #             - CMD
+    #             - pg_isready
+    #             - '-q'
+    #             - '-d'
+    #             - '${DB_DATABASE}'
+    #             - '-U'
+    #             - '${DB_USERNAME}'
+    #         retries: 3
+    #         timeout: 5s
+networks:
+    go_app_net:
+        driver: bridge
+
+volumes:
+    app-pgsql:
+        driver: local
