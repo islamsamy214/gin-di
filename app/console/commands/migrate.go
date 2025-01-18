@@ -5,20 +5,32 @@ import (
 	"web-app/app/helpers"
 	"web-app/app/services/core"
 	"web-app/database"
+	"web-app/database/migrations"
 )
-
-var db, _ = core.NewSqliteService()
 
 /*
  * Migrate runs all the migrations
  */
 func Migrate() {
+	var db, _ = core.NewPostgresService()
+
 	log.Println("Migrating the database...")
 	// Initialize the kernel
 	migrationsKernel := database.NewKernel()
 
 	// Check the migrated tables
-	migratedTables, _ := db.Read(`SELECT name FROM migrations`)
+	migratedTables, err := db.Read(`SELECT name FROM migrations`)
+
+	// Check if migrations table does not exist create it
+	if err != nil {
+		if err.Error() == `pq: relation "migrations" does not exist` {
+			// Create the migrations table
+			(&migrations.Migrate{}).Up()
+			migratedTables, _ = db.Read(`SELECT name FROM migrations`)
+		} else {
+			log.Printf("Unexpected error: %v", err)
+		}
+	}
 
 	// Get the un-migrated tables
 	var unmigratedTables []string

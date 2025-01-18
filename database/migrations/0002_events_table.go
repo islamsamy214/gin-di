@@ -9,24 +9,32 @@ import (
 type EventTable struct{}
 
 func (*EventTable) Up() {
-	// Create the events table
 	log.Println("Creating events table")
 
 	// Initialize the service
-	db, _ := core.NewSqliteService()
+	db, err := core.NewPostgresService()
+	if err != nil {
+		log.Printf("Failed to initialize database service: %v", err)
+		return
+	}
+	defer db.Close()
 
 	// Start the transaction
-	tx, _ := db.Begin()
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return
+	}
 
 	// Create the table
-	_, err := tx.Exec(`
+	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS events (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT,
-			date TEXT,
-			created_at TEXT,
-			user_id INTEGER,
-			FOREIGN KEY(user_id) REFERENCES users(id)
+			id SERIAL PRIMARY KEY,
+			name TEXT NOT NULL,
+			date DATE NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			user_id INTEGER NOT NULL,
+			CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 		);
 	`)
 	if err != nil {
@@ -36,10 +44,10 @@ func (*EventTable) Up() {
 	}
 
 	// Insert into migrations table
-	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES ('events');`)
+	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES ($1);`, "events")
 	if err != nil {
-		tx.Rollback()
 		log.Printf("Failed to insert into migrations table: %v", err)
+		tx.Rollback()
 		return
 	}
 
@@ -53,17 +61,25 @@ func (*EventTable) Up() {
 }
 
 func (*EventTable) Down() {
-	// Drop the table
 	log.Println("Dropping events table")
 
 	// Initialize the service
-	db, _ := core.NewSqliteService()
+	db, err := core.NewPostgresService()
+	if err != nil {
+		log.Printf("Failed to initialize database service: %v", err)
+		return
+	}
+	defer db.Close()
 
 	// Start the transaction
-	tx, _ := db.Begin()
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return
+	}
 
 	// Drop the table
-	_, err := tx.Exec(`DROP TABLE IF EXISTS events;`)
+	_, err = tx.Exec(`DROP TABLE IF EXISTS events;`)
 	if err != nil {
 		log.Printf("Failed to drop events table: %v", err)
 		tx.Rollback()
@@ -71,10 +87,10 @@ func (*EventTable) Down() {
 	}
 
 	// Delete from migrations table
-	_, err = tx.Exec(`DELETE FROM migrations WHERE name = 'events';`)
+	_, err = tx.Exec(`DELETE FROM migrations WHERE name = $1;`, "events")
 	if err != nil {
-		tx.Rollback()
 		log.Printf("Failed to delete from migrations table: %v", err)
+		tx.Rollback()
 		return
 	}
 

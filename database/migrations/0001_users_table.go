@@ -8,19 +8,30 @@ import (
 type UserTable struct{}
 
 func (*UserTable) Up() {
-	log.Println("Creating  table")
-	db, _ := core.NewSqliteService()
+	log.Println("Creating users table")
+
+	// Initialize the service
+	db, err := core.NewPostgresService()
+	if err != nil {
+		log.Printf("Failed to initialize database service: %v", err)
+		return
+	}
+	defer db.Close()
 
 	// Begin transaction
-	tx, _ := db.Begin()
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return
+	}
 
 	// Create the table
-	_, err := tx.Exec(`
+	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT,
-			password TEXT,
-			created_at TEXT
+			id SERIAL PRIMARY KEY,
+			username TEXT NOT NULL,
+			password TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 	if err != nil {
@@ -30,7 +41,7 @@ func (*UserTable) Up() {
 	}
 
 	// Insert into migrations table
-	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES ('users');`)
+	_, err = tx.Exec(`INSERT INTO migrations (name) VALUES ($1);`, "users")
 	if err != nil {
 		tx.Rollback()
 		log.Printf("Failed to insert into migrations table: %v", err)
@@ -47,16 +58,25 @@ func (*UserTable) Up() {
 }
 
 func (*UserTable) Down() {
-	// Drop the table
 	log.Println("Dropping users table")
 
-	db, _ := core.NewSqliteService()
+	// Initialize the service
+	db, err := core.NewPostgresService()
+	if err != nil {
+		log.Printf("Failed to initialize database service: %v", err)
+		return
+	}
+	defer db.Close()
 
 	// Begin transaction
-	tx, _ := db.Begin()
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return
+	}
 
 	// Drop the table
-	_, err := tx.Exec(`DROP TABLE IF EXISTS users;`)
+	_, err = tx.Exec(`DROP TABLE IF EXISTS users;`)
 	if err != nil {
 		log.Printf("Failed to drop users table: %v", err)
 		tx.Rollback()
@@ -64,7 +84,7 @@ func (*UserTable) Down() {
 	}
 
 	// Delete from migrations table
-	_, err = tx.Exec(`DELETE FROM migrations WHERE name = 'users';`)
+	_, err = tx.Exec(`DELETE FROM migrations WHERE name = $1;`, "users")
 	if err != nil {
 		tx.Rollback()
 		log.Printf("Failed to delete from migrations table: %v", err)
@@ -76,4 +96,6 @@ func (*UserTable) Down() {
 		log.Printf("Failed to commit transaction: %v", err)
 		return
 	}
+
+	log.Println("Users table dropped")
 }
