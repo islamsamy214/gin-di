@@ -1,9 +1,7 @@
 package providers
 
 import (
-	"net/http"
-	"os"
-	"time"
+	"web-app/configs"
 	web "web-app/routes/http"
 	api "web-app/routes/http/apis"
 
@@ -27,13 +25,7 @@ func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
 }
 
 func (r *HttpServiceProvider) Serve(router *gin.Engine) {
-	server := &http.Server{
-		Addr:           "0.0.0.0:" + os.Getenv("APP_PORT"),
-		Handler:        router,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
+	server := configs.NewHttpServer(router)
 	server.ListenAndServe()
 }
 
