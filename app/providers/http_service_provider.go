@@ -30,12 +30,10 @@ func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
 	router.Use(gin.Recovery())
 }
 
-func (r *HttpServiceProvider) Serve(router *gin.Engine) {
-	server := configs.NewHttpServerConfig(router)
-	server.ListenAndServe()
-}
-
 func (r *HttpServiceProvider) Boot() {
+	// Initialize gin engine
+	r.init()
+
 	// Create a new gin router
 	router := gin.New()
 
@@ -45,6 +43,11 @@ func (r *HttpServiceProvider) Boot() {
 	// Add global middleware
 	r.GlobalMiddleware(router)
 
+	// Start the server
+	configs.NewHttpServerConfig(router).ListenAndServe()
+}
+
+func (r *HttpServiceProvider) init() {
 	// Get the app config
 	appCofing := configs.NewAppConfig()
 
@@ -54,7 +57,4 @@ func (r *HttpServiceProvider) Boot() {
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
-
-	// Start the server
-	r.Serve(router)
 }
