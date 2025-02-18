@@ -9,10 +9,8 @@ if [ ! -z "$WWWUSER" ]; then
     usermod -u $WWWUSER app
 fi
 
-export PATH=$PATH:/usr/local/go/bin
-export GOPATH=/var/www/html/go
-export GOMODCACHE=/var/www/html/go/pkg/mod
-export GOBIN=/var/www/html/go/bin
+mkdir -p /var/www/html/bin
+mkdir -p /var/www/html/go/pkg/mod
 
 go run /var/www/html/app/console/kernel.go migrate
 

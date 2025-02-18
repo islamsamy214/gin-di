@@ -5,7 +5,6 @@ LABEL maintainer="Islam Samy"
 # Arguments
 ARG WWWGROUP=1000
 ARG WWWUSER=1000
-ARG NODE_VERSION=22
 ARG GOLANG_VERSION=1.23.5
 # ARG MYSQL_CLIENT="mysql-client"
 ARG POSTGRES_VERSION=17
@@ -16,13 +15,9 @@ WORKDIR /var/www/html
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-ENV SUPERVISOR_GO_COMMAND="/usr/local/go/bin/go run main.go http"
+ENV SUPERVISOR_GO_COMMAND="go run main.go http"
 ENV SUPERVISOR_GO_USER="app"
 ENV PGSSLCERT /tmp/postgresql.crt
-ENV GOCACHE=/var/tmp/go-cache
-ENV GOPATH=/var/www/html/go
-ENV GOMODCACHE=/var/www/html/go/pkg/mod
-ENV GOBIN=/var/www/html/go/bin
 
 # Define the timezone
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -44,14 +39,12 @@ RUN apt-get update && apt-get install -y wget && \
     rm go$GOLANG_VERSION.linux-amd64.tar.gz && \
     echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
 
-# # Install nodejs
-# RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-#     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-#     && apt-get update \
-#     && apt-get install -y nodejs \
-#     # && npm install -g npm \
-#     # && npm install -g pnpm \
-#     && npm install -g bun
+# Set the go env
+ENV PATH=$PATH:/usr/local/go/bin
+ENV GOCACHE=/var/tmp/go-cache
+ENV GOPATH=/var/www/html/go
+ENV GOMODCACHE=/var/www/html/go/pkg/mod
+ENV GOBIN=/var/www/html/go/bin
 
 # Install database clients
 RUN curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | tee /etc/apt/keyrings/pgdg.gpg >/dev/null \
@@ -76,9 +69,11 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY . .
 
 # Build the Go app
-RUN /usr/local/go/bin/go mod tidy
-RUN mkdir -p /var/tmp/go-cache 
+RUN go mod tidy
+RUN mkdir -p /var/tmp/go-cache
 RUN mkdir -p /var/www/html/go/pkg/mod
+RUN mkdir -p /opt/go-bins
+RUN go build -o /opt/go-bins/main ./main.go
 
 # Set permissions
 RUN chown -R app /var/www/html/storage
