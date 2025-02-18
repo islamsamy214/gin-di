@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewHttpServer(router *gin.Engine) *http.Server {
+func NewHttpServerConfig(router *gin.Engine) *http.Server {
 	appConfig := NewAppConfig()
 	return &http.Server{
 		Addr:           appConfig.Host + ":" + appConfig.Port,

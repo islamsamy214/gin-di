@@ -22,16 +22,22 @@ func (r *HttpServiceProvider) Register(router *gin.Engine) {
 
 func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
 	// Add global middleware here
+
+	// Add custom logger middleware
+	router.Use(gin.LoggerWithWriter(configs.NewLogsWriterConfig()))
+
+	// Add custom recovery middleware
+	router.Use(gin.Recovery())
 }
 
 func (r *HttpServiceProvider) Serve(router *gin.Engine) {
-	server := configs.NewHttpServer(router)
+	server := configs.NewHttpServerConfig(router)
 	server.ListenAndServe()
 }
 
 func (r *HttpServiceProvider) Boot() {
 	// Create a new gin router
-	router := gin.Default()
+	router := gin.New()
 
 	// Register the routes
 	r.Register(router)

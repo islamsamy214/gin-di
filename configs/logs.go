@@ -1,4 +1,4 @@
-package core
+package configs
 
 import (
 	"io"
@@ -9,15 +9,10 @@ import (
 	"github.com/natefinch/lumberjack"
 )
 
-type Logger struct{}
-
-func NewLogger() *Logger {
-	return &Logger{}
-}
-
-func (*Logger) SetupWriter() io.Writer {
+func NewLogsWriterConfig() io.Writer {
+	appConfig := NewAppConfig()
 	dailyLogger := &lumberjack.Logger{
-		Filename:   "./storage/logs/" + os.Getenv("APP_NAME") + "-" + time.Now().Format("2006-01-02") + ".log",
+		Filename:   "./storage/logs/" + appConfig.Name + "-" + time.Now().Format("2006-01-02") + ".log",
 		MaxSize:    10, // Max megabytes before log is rotated
 		MaxBackups: 7,  // Max number of old log files to retain
 		MaxAge:     30, // Max number of days to retain log files

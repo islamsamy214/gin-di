@@ -23,9 +23,6 @@ func main() {
 	// Load the .env file
 	(&providers.EnvServiceProvider{}).Boot()
 
-	// Gin's default logger to use our custom writer
-	(&providers.LogServiceProvider{}).Boot()
-
 	// Check if the first argument is "migrate"
 	if args[1] == "migrate" {
 		// get the flags --down

@@ -10,9 +10,6 @@ func main() {
 	// Load the .env file
 	providers.NewEnvServiceProvider().Boot()
 
-	// Gin's default logger to use our custom writer
-	providers.NewLogServiceProvider().Boot()
-
 	// Register all the service providers
 	providers.NewAppServiceProvider().Register()
 
