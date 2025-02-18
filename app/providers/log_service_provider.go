@@ -8,8 +8,11 @@ import (
 
 type LogServiceProvider struct{}
 
-func (l *LogServiceProvider) Boot() {
-	// Boot the logger service
+func NewLogServiceProvider() *LogServiceProvider {
+	return &LogServiceProvider{}
+}
+
+func (r *LogServiceProvider) Boot() {
 	multiWriter := (core.NewLogger()).SetupWriter()
 	gin.DefaultWriter = multiWriter
 	gin.DefaultErrorWriter = multiWriter

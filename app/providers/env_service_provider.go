@@ -10,8 +10,11 @@ import (
 
 type EnvServiceProvider struct{}
 
+func NewEnvServiceProvider() *EnvServiceProvider {
+	return &EnvServiceProvider{}
+}
+
 func (e *EnvServiceProvider) Boot() {
-	// Boot the env service
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
