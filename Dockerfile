@@ -10,12 +10,12 @@ ARG GOLANG_VERSION=1.23.5
 ARG POSTGRES_VERSION=17
 
 # Workdir
-WORKDIR /var/www/html
+WORKDIR /web-app
 
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-ENV SUPERVISOR_GO_COMMAND="go run main.go http"
+ENV SUPERVISOR_GO_COMMAND="/opt/go-bins/main http"
 ENV SUPERVISOR_GO_USER="app"
 ENV PGSSLCERT /tmp/postgresql.crt
 
@@ -39,12 +39,12 @@ RUN apt-get update && apt-get install -y wget && \
     rm go$GOLANG_VERSION.linux-amd64.tar.gz && \
     echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
 
-# Set the go env
+# Set the go environment variables
 ENV PATH=$PATH:/usr/local/go/bin
 ENV GOCACHE=/var/tmp/go-cache
-ENV GOPATH=/var/www/html/go
-ENV GOMODCACHE=/var/www/html/go/pkg/mod
-ENV GOBIN=/var/www/html/go/bin
+ENV GOPATH=/web-app/go
+ENV GOMODCACHE=/web-app/go/pkg/mod
+ENV GOBIN=/web-app/go/bin
 
 # Install database clients
 RUN curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | tee /etc/apt/keyrings/pgdg.gpg >/dev/null \
@@ -71,15 +71,15 @@ COPY . .
 # Build the Go app
 RUN go mod tidy
 RUN mkdir -p /var/tmp/go-cache
-RUN mkdir -p /var/www/html/go/pkg/mod
+RUN mkdir -p /web-app/go/pkg/mod
 RUN mkdir -p /opt/go-bins
 RUN go build -o /opt/go-bins/main ./main.go
 
 # Set permissions
-RUN chown -R app /var/www/html/storage
 RUN chmod +x /usr/local/bin/start-container.sh
-RUN chown -R app:app /var/www/html
-RUN chown app:app /var/tmp/go-cache
+RUN chown -R app:app /var/tmp/go-cache
+RUN chown -R app:app /opt/go-bins
+RUN chown -R app:app /web-app
 
 EXPOSE 8000/tcp
 

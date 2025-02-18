@@ -9,13 +9,7 @@ if [ ! -z "$WWWUSER" ]; then
     usermod -u $WWWUSER app
 fi
 
-mkdir -p /var/www/html/bin
-mkdir -p /var/www/html/go/pkg/mod
-
-go run /var/www/html/app/console/kernel.go migrate
-
-chown -R app:app /var/www/html
-chmod -R 755 /var/www/html/storage
+# Do some staff here
 
 if [ $# -gt 0 ]; then
     if [ "$SUPERVISOR_GO_USER" = "root" ]; then

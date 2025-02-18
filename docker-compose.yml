@@ -1,5 +1,6 @@
 services:
-  go_app:
+  web-app:
+    container_name: web-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -22,14 +23,14 @@ services:
       XDEBUG_CONFIG: "${APP_XDEBUG_CONFIG:-client_host=host.docker.internal}"
       IGNITION_LOCAL_SITES_PATH: "${PWD}"
     volumes:
-      - ".:/var/www/html"
-      - "go-cache:/var/www/html/go"
-      - "go-bins:/var/www/html/bin"
+      - ".:/web-app"
+      - "go-cache:/web-app/go"
+      - "go-bins:/web-app/bin"
     networks:
-      - go_app_net
+      - web_app_net
       
 networks:
-  go_app_net:
+  web_app_net:
     driver: bridge
 
 volumes:
