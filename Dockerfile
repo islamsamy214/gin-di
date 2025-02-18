@@ -16,7 +16,7 @@ WORKDIR /var/www/html
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-ENV SUPERVISOR_GO_COMMAND="/usr/local/go/bin/go run main.go"
+ENV SUPERVISOR_GO_COMMAND="/usr/local/go/bin/go run main.go http"
 ENV SUPERVISOR_GO_USER="app"
 ENV PGSSLCERT /tmp/postgresql.crt
 ENV GOCACHE=/var/tmp/go-cache
