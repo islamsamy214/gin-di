@@ -8,7 +8,7 @@ import (
 )
 
 func NewHttpServer(router *gin.Engine) *http.Server {
-	appConfig := NewApp()
+	appConfig := NewAppConfig()
 	return &http.Server{
 		Addr:           appConfig.Host + ":" + appConfig.Port,
 		Handler:        router,

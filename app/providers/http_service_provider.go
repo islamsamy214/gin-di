@@ -39,6 +39,16 @@ func (r *HttpServiceProvider) Boot() {
 	// Add global middleware
 	r.GlobalMiddleware(router)
 
+	// Get the app config
+	appCofing := configs.NewAppConfig()
+
+	// Set the gin mode
+	if appCofing.Env == "production" && !appCofing.Debug {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+
 	// Start the server
 	r.Serve(router)
 }

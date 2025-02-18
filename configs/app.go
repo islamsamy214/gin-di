@@ -11,7 +11,7 @@ type AppConfig struct {
 	Port  string
 }
 
-func NewApp() *AppConfig {
+func NewAppConfig() *AppConfig {
 	// Get app name
 	name := os.Getenv("APP_NAME")
 	if name == "" {
