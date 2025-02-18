@@ -51,10 +51,10 @@ func (r *HttpServiceProvider) init() {
 	// Get the app config
 	appCofing := configs.NewAppConfig()
 
-	// Set the gin mode
-	if appCofing.Env == "production" && !appCofing.Debug {
-		gin.SetMode(gin.ReleaseMode)
-	} else {
+	// Set gin mode
+	if appCofing.Debug {
 		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
 	}
 }
