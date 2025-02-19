@@ -4,16 +4,17 @@ Here's a complete and concise README for your project:
 
 # Gin DI Framework
 
-A lightweight, Laravel-inspired service container implementation for the [Gin Framework](https://github.com/gin-gonic/gin). Simplify dependency management, enhance modularity, and build scalable Go web applications with ease.
+A lightweight, Laravel-inspired structure implementation for the [Gin Framework](https://github.com/gin-gonic/gin). Simplify dependency management, enhance modularity, and build scalable Go web applications with ease.
 
 ---
 
 ## 🚀 Features
-
-- **Service Container**: Register and resolve dependencies effortlessly.  
-- **Middleware Integration**: Seamlessly inject services into Gin's context.  
-- **Extensible Design**: Add custom services and providers with ease.  
+  
+- **Middleware Integration**: Seamlessly inject services into Gin's context.
+- **Extensible Design**: Add custom services and providers with ease.
 - **Laravel-Inspired**: Bring Laravel's elegance to your Go applications.
+- **Database**: Starting with pgsql primarily, you can replace it with any other client **NO ORM USED, NOR SQLC** just a pure pgsql client [Go pgsql client](https://github.com/lib/pq)
+- **Logging**: Daily logging, alongside with the CLI logging
 
 ---
 
@@ -27,37 +28,6 @@ git clone github.com/islamsamy214/gin-di
 ---
 
 ## 🔧 Usage
-
-### Setting Up the Service Provider
-
-Define a service provider to register your services:
-
-```go
-package providers
-
-import (
-    "github.com/gin-gonic/gin"
-    "web-app/app/services/core"
-    "web-app/app/services"
-)
-
-type AppServiceProvider struct {
-    container *core.Container
-}
-
-func NewAppServiceProvider() *AppServiceProvider {
-    container := core.NewContainer()
-    container.Bind("MyService", services.NewService())
-    return &AppServiceProvider{container: container}
-}
-
-func (s *AppServiceProvider) Register() gin.HandlerFunc {
-    return func(ctx *gin.Context) {
-        ctx.Set("container", s.container)
-        ctx.Next()
-    }
-}
-```
 
 ### Registering Routes
 
@@ -88,17 +58,21 @@ func Register(route *gin.Engine) {
 
 ```plaintext
 /app
+  /http
+  /grpc
+  /console
+  /models
   /services
-  /services/core
-  /routes
   /providers
 /config
-/docs
+/routes
+/bin
 /tests
 main.go
 README.md
 LICENSE
 .gitignore
+.env
 .env.example
 ```
 
