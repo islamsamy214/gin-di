@@ -1,7 +1,3 @@
-Here's a complete and concise README for your project:
-
----
-
 # Gin DI Framework
 
 A lightweight, Laravel-inspired structure implementation for the [Gin Framework](https://github.com/gin-gonic/gin). Simplify dependency management, enhance modularity, and build scalable Go web applications with ease.
