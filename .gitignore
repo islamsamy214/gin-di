@@ -35,9 +35,6 @@ vendor/
 *.env
 .DS_Store
 Thumbs.db
-storage/logs/
-storage/cache/
-storage/views/
 
 # Coverage reports
 *.cover
