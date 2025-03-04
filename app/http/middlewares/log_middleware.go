@@ -1,4 +1,4 @@
-package configs
+package middlewares
 
 import (
 	"io"
@@ -6,23 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"web-app/configs"
 )
 
-/**
- * Initialize the logs configuration.
- *
- * This function initializes the logs configuration by setting up the log file and console output.
- * It also starts a separate goroutine to clean up old log files.
- *
- * @return io.Writer The logs configuration instance.
- */
-func NewLogsConfig() io.Writer {
-	appConfig := NewAppConfig()
+func NewLogIOWriterMiddleware() io.Writer {
 	logDir := "./storage/logs/"
 	os.MkdirAll(logDir, os.ModePerm) // Ensure log directory exists
 
 	// Generate log file name based on the current date
-	logFileName := filepath.Join(logDir, appConfig.Name+"-"+time.Now().Format("2006-01-02")+".log")
+	logFileName := filepath.Join(logDir, configs.NewAppConfig().Name+"-"+time.Now().Format("2006-01-02")+".log")
 
 	// Open the log file in append mode, create if not exists
 	logFile, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

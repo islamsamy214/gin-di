@@ -3,6 +3,7 @@ package providers
 import (
 	"net/http"
 	"time"
+	"web-app/app/http/middlewares"
 	"web-app/configs"
 	web "web-app/routes/http"
 	api "web-app/routes/http/apis"
@@ -26,7 +27,7 @@ func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
 	// Add global middleware here
 
 	// Add custom logger middleware
-	router.Use(gin.LoggerWithWriter(configs.NewLogsConfig()))
+	router.Use(gin.LoggerWithWriter(middlewares.NewLogIOWriterMiddleware()))
 
 	// Add custom recovery middleware
 	router.Use(gin.Recovery())
