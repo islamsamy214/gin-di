@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"net/http"
-	"web-app/app/models/user"
+	"web-app/app/models"
 	"web-app/app/services"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +15,7 @@ func NewAuthController() *AuthController {
 }
 
 func (*AuthController) Login(ctx *gin.Context) {
-	user := user.NewUserModel()
+	user := models.NewUserModel()
 	err := ctx.ShouldBindJSON(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

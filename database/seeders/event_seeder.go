@@ -2,13 +2,13 @@ package seeders
 
 import (
 	"log"
-	"web-app/app/models/event"
+	"web-app/app/models"
 )
 
 type EventSeeder struct{}
 
 func (e *EventSeeder) Run() {
-	eventModel := event.NewEventModel()
+	eventModel := models.NewEventModel()
 
 	randomEvents := getRandomEvents()
 
@@ -23,8 +23,8 @@ func (e *EventSeeder) Run() {
 	}
 }
 
-func getRandomEvents() []*event.Event {
-	events := []*event.Event{
+func getRandomEvents() []*models.Event {
+	events := []*models.Event{
 		{
 			Name:   "Birthday Party",
 			Date:   "2025-02-15",

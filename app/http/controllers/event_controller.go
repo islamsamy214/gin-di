@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"net/http"
-	"web-app/app/models/event"
+	"web-app/app/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +14,7 @@ func NewEventController() *EventController {
 }
 
 func (e *EventController) Index(c *gin.Context) {
-	eventsModel := event.NewEventModel()
+	eventsModel := models.NewEventModel()
 	events, err := eventsModel.Paginate(10, 1)
 
 	if err != nil {
@@ -25,7 +25,7 @@ func (e *EventController) Index(c *gin.Context) {
 }
 
 func (e *EventController) Create(c *gin.Context) {
-	eventsModel := event.NewEventModel()
+	eventsModel := models.NewEventModel()
 	if err := c.ShouldBindJSON(eventsModel); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

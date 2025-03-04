@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"time"
-	"web-app/app/models/user"
+	"web-app/app/models"
 	"web-app/configs"
 
 	"github.com/dgrijalva/jwt-go"
@@ -120,7 +120,7 @@ func VerifyPassword(hashedPassword, password string) (bool, error) {
 	return subtle.ConstantTimeCompare(newHash, storedHash) == 1, nil
 }
 
-func AttemptLogin(user *user.User, password string) (*user.User, error) {
+func AttemptLogin(user *models.User, password string) (*models.User, error) {
 	// Get the user from the database
 	user, err := GetUserByUsername(user)
 	if err != nil {
@@ -140,7 +140,7 @@ func AttemptLogin(user *user.User, password string) (*user.User, error) {
 	return user, nil
 }
 
-func GetUserByUsername(u *user.User) (*user.User, error) {
+func GetUserByUsername(u *models.User) (*models.User, error) {
 	// Find the user by username
 	err := u.FindByUsername()
 	if err != nil {

@@ -2,14 +2,14 @@ package seeders
 
 import (
 	"log"
-	"web-app/app/models/user"
+	"web-app/app/models"
 	"web-app/app/services"
 )
 
 type UserSeeder struct{}
 
 func (u *UserSeeder) Run() {
-	userModel := user.NewUserModel()
+	userModel := models.NewUserModel()
 
 	userModel.Username = "islacks"
 	hashedPassword, err := services.HashPassword("password")
