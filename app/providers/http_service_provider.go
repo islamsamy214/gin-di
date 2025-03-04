@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"net/http"
+	"time"
 	"web-app/configs"
 	web "web-app/routes/http"
 	api "web-app/routes/http/apis"
@@ -24,7 +26,7 @@ func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
 	// Add global middleware here
 
 	// Add custom logger middleware
-	router.Use(gin.LoggerWithWriter(configs.NewLogsWriterConfig()))
+	router.Use(gin.LoggerWithWriter(configs.NewLogsConfig()))
 
 	// Add custom recovery middleware
 	router.Use(gin.Recovery())
@@ -44,7 +46,13 @@ func (r *HttpServiceProvider) Boot() {
 	r.GlobalMiddleware(router)
 
 	// Start the server
-	configs.NewHttpServerConfig(router).ListenAndServe()
+	(&http.Server{
+		Addr:           configs.NewAppConfig().Host + ":" + configs.NewAppConfig().Port,
+		Handler:        router,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}).ListenAndServe()
 }
 
 func (r *HttpServiceProvider) init() {
