@@ -8,8 +8,15 @@ import (
 	"time"
 )
 
-// NewLogsWriterConfig creates a logger that writes to both the console and a rotating file.
-func NewLogsWriterConfig() io.Writer {
+/**
+ * Initialize the logs configuration.
+ *
+ * This function initializes the logs configuration by setting up the log file and console output.
+ * It also starts a separate goroutine to clean up old log files.
+ *
+ * @return io.Writer The logs configuration instance.
+ */
+func NewLogsConfig() io.Writer {
 	appConfig := NewAppConfig()
 	logDir := "./storage/logs/"
 	os.MkdirAll(logDir, os.ModePerm) // Ensure log directory exists
