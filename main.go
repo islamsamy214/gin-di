@@ -7,9 +7,6 @@ import (
 )
 
 func main() {
-	// Load the .env file
-	providers.NewEnvServiceProvider().Boot()
-
 	// Start server on http
 	if len(os.Args) > 1 && os.Args[1] == "http" {
 		providers.NewHttpServiceProvider().Boot()

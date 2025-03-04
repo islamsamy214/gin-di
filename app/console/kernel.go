@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"web-app/app/console/commands"
-	"web-app/app/providers"
 )
 
 /*
@@ -19,9 +18,6 @@ func main() {
 		fmt.Println("Usage: go run app/console/kernel.go <command>")
 		os.Exit(1)
 	}
-
-	// Load the .env file
-	(&providers.EnvServiceProvider{}).Boot()
 
 	// Check if the first argument is "migrate"
 	if args[1] == "migrate" {
