@@ -5,9 +5,9 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
-	"os"
 	"time"
 	"web-app/app/models/user"
+	"web-app/configs"
 
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/argon2"
@@ -15,7 +15,7 @@ import (
 
 var (
 	// Define a secret key for signing tokens. This should be securely stored in a real-world application.
-	secretKey = []byte(os.Getenv("JWT_SECRET"))
+	secretKey = []byte(configs.NewJwtConfig().SecretKey)
 )
 
 // Claims represents the JWT claims structure
