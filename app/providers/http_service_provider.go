@@ -5,8 +5,7 @@ import (
 	"time"
 	"web-app/app/http/middlewares"
 	"web-app/configs"
-	web "web-app/routes/http"
-	api "web-app/routes/http/apis"
+	httpApis "web-app/routes/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,8 +18,7 @@ func NewHttpServiceProvider() *HttpServiceProvider {
 
 func (r *HttpServiceProvider) Register(router *gin.Engine) {
 	// Register the routes
-	web.Regester(router)
-	api.Regester(router)
+	httpApis.Regester(router)
 }
 
 func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {

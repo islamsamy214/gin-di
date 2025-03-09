@@ -1,4 +1,4 @@
-package apis
+package http
 
 import (
 	"web-app/app/http/controllers"
