@@ -23,19 +23,19 @@ func NewUserModel() *User {
 }
 
 // Create implements the Model interface Create method
-func (u *User) Create() error {
+func (user *User) Create() error {
 	query := `
         INSERT INTO users (username, password)
         VALUES ($1, $2)
         RETURNING id`
 
-	result, err := u.db.Create(query, u.Username, u.Password)
+	result, err := user.db.Create(query, user.Username, user.Password)
 	if err != nil {
 		log.Printf("error creating user: %v", err)
 		return err
 	}
 
-	err = result.Scan(&u.ID)
+	err = result.Scan(&user.ID)
 	if err != nil {
 		log.Printf("error scanning user: %v", err)
 	}
@@ -44,8 +44,8 @@ func (u *User) Create() error {
 }
 
 // Find implements the Model interface Find method
-func (u *User) Find() error {
-	if u.Username == "" {
+func (user *User) Find() error {
+	if user.Username == "" {
 		return errors.New("username is required")
 	}
 
@@ -54,7 +54,7 @@ func (u *User) Find() error {
         FROM users 
         WHERE username = $1`
 
-	rows, err := u.db.Read(query, u.Username)
+	rows, err := user.db.Read(query, user.Username)
 	if err != nil {
 		log.Printf("error finding user: %v", err)
 		return err
@@ -62,7 +62,7 @@ func (u *User) Find() error {
 	defer rows.Close()
 
 	if rows.Next() {
-		err := rows.Scan(&u.ID, &u.Username, &u.Password, &u.CreatedAt)
+		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
 		if err != nil {
 			log.Printf("error scanning user: %v", err)
 			return err
@@ -74,8 +74,8 @@ func (u *User) Find() error {
 }
 
 // FindByUsername implements the Model interface FindByUsername method
-func (u *User) FindByUsername() error {
-	if u.Username == "" {
+func (user *User) FindByUsername() error {
+	if user.Username == "" {
 		return errors.New("username is required")
 	}
 
@@ -84,7 +84,7 @@ func (u *User) FindByUsername() error {
 		FROM users
 		WHERE username = $1`
 
-	rows, err := u.db.Read(query, u.Username)
+	rows, err := user.db.Read(query, user.Username)
 	if err != nil {
 		log.Printf("error finding user: %v", err)
 		return err
@@ -92,7 +92,7 @@ func (u *User) FindByUsername() error {
 	defer rows.Close()
 
 	if rows.Next() {
-		err := rows.Scan(&u.ID, &u.Username, &u.Password, &u.CreatedAt)
+		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
 		if err != nil {
 			log.Printf("error scanning user: %v", err)
 			return err
@@ -104,8 +104,8 @@ func (u *User) FindByUsername() error {
 }
 
 // Update implements the Model interface Update method
-func (u *User) Update() error {
-	if u.ID == 0 {
+func (user *User) Update() error {
+	if user.ID == 0 {
 		return errors.New("id is required")
 	}
 
@@ -114,7 +114,7 @@ func (u *User) Update() error {
         SET username = $1, password = $2
         WHERE id = $3`
 
-	_, err := u.db.Update(query, u.Username, u.Password, u.ID)
+	_, err := user.db.Update(query, user.Username, user.Password, user.ID)
 	if err != nil {
 		log.Printf("error updating user: %v", err)
 		return err
@@ -124,8 +124,8 @@ func (u *User) Update() error {
 }
 
 // Delete implements the Model interface Delete method
-func (u *User) Delete() error {
-	if u.ID == 0 {
+func (user *User) Delete() error {
+	if user.ID == 0 {
 		return errors.New("id is required")
 	}
 
@@ -133,7 +133,7 @@ func (u *User) Delete() error {
         DELETE FROM users 
         WHERE id = $1`
 
-	_, err := u.db.Delete(query, u.ID)
+	_, err := user.db.Delete(query, user.ID)
 	if err != nil {
 		log.Printf("error deleting user: %v", err)
 		return err
@@ -142,7 +142,7 @@ func (u *User) Delete() error {
 	return nil
 }
 
-func (u *User) Paginate(limit, page int) ([]User, error) {
+func (user *User) Paginate(limit, page int) ([]User, error) {
 	// Set default values
 	if limit <= 0 {
 		limit = 10
@@ -158,7 +158,7 @@ func (u *User) Paginate(limit, page int) ([]User, error) {
         ORDER BY id DESC
         LIMIT $1 OFFSET $2`
 
-	rows, err := u.db.Read(query, limit, offset)
+	rows, err := user.db.Read(query, limit, offset)
 	if err != nil {
 		log.Printf("error paginating users: %v", err)
 		return nil, err
