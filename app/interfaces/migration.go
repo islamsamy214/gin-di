@@ -1,4 +1,4 @@
-package migrations
+package interfaces
 
 type Migration interface {
 	Up()

@@ -1,4 +1,4 @@
-package models
+package interfaces
 
 type Model interface {
 	Create() error

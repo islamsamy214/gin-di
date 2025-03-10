@@ -1,4 +1,4 @@
-package seeders
+package interfaces
 
 type Seeder interface {
 	Run()

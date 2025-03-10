@@ -1,3 +1,3 @@
-package http
+package interfaces
 
 type Controller interface{}
