@@ -16,33 +16,18 @@ func NewHttpServiceProvider() *HttpServiceProvider {
 	return &HttpServiceProvider{}
 }
 
-func (r *HttpServiceProvider) Register(router *gin.Engine) {
-	// Register the routes
-	httpApis.Regester(router)
-}
-
-func (r *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
-	// Add global middleware here
-
-	// Add custom logger middleware
-	router.Use(gin.LoggerWithWriter(middlewares.NewLogIOWriterMiddleware()))
-
-	// Add custom recovery middleware
-	router.Use(gin.Recovery())
-}
-
-func (r *HttpServiceProvider) Boot() {
+func (provider *HttpServiceProvider) Boot() {
 	// Initialize gin engine
-	r.init()
+	provider.init()
 
 	// Create a new gin router
 	router := gin.New()
 
 	// Register the routes
-	r.Register(router)
+	provider.Register(router)
 
 	// Add global middleware
-	r.GlobalMiddleware(router)
+	provider.GlobalMiddleware(router)
 
 	// Start the server
 	(&http.Server{
@@ -54,7 +39,20 @@ func (r *HttpServiceProvider) Boot() {
 	}).ListenAndServe()
 }
 
-func (r *HttpServiceProvider) init() {
+func (provider *HttpServiceProvider) Register(router *gin.Engine) {
+	// Register the routes
+	httpApis.Regester(router)
+}
+
+func (provider *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
+	// Add global middleware here
+	router.Use(gin.LoggerWithWriter(middlewares.NewLogIOWriterMiddleware()))
+
+	// Add custom recovery middleware
+	router.Use(gin.Recovery())
+}
+
+func (provider *HttpServiceProvider) init() {
 	// Get the app config
 	appCofing := configs.NewAppConfig()
 
