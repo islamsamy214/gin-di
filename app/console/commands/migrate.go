@@ -2,7 +2,7 @@ package commands
 
 import (
 	"log"
-	"web-app/app/helpers"
+	"slices"
 	"web-app/app/services/core"
 	"web-app/database"
 	"web-app/database/migrations"
@@ -43,7 +43,7 @@ func Migrate() {
 	// Loop through all the migrations
 	for table, migration := range migrationsKernel.Migrations {
 		// Check if the migration has been run
-		if !helpers.Contains(unmigratedTables, table) {
+		if !slices.Contains(unmigratedTables, table) {
 			migration.Up()
 		}
 
