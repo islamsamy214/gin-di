@@ -17,9 +17,11 @@ func main() {
 	}
 
 	// Any other commands should go as console commands
-	if len(os.Args) > 1 {
-		providers.NewConsoleServiceProvider().Boot()
+	if len(os.Args) >= 2 {
+		providers.NewConsoleServiceProvider(os.Args[1], os.Args[2:]).Boot()
+		os.Exit(0)
 	}
 
-	log.Println("You need to pass a command to run the application")
+	log.Println("Usage: go run main.go <command>")
+	os.Exit(1)
 }
