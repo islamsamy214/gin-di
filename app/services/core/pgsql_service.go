@@ -23,7 +23,7 @@ func NewPostgresService() (*PostgresService, error) {
 			"user="+databaseConfig.Username+" "+
 			"password="+databaseConfig.Password+" "+
 			"dbname="+databaseConfig.Database+" "+
-			"sslmode=prefer")
+			"sslmode=disable")
 	if err != nil {
 		log.Println("Error opening database connection:", err)
 		return nil, err
