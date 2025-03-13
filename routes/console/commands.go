@@ -11,5 +11,6 @@ func Register() map[string]interfaces.Command {
 	return map[string]interfaces.Command{
 		"example": console.NewExampleCommand(),
 		"migrate": console.NewMigrateCommand(),
+		"seed":    console.NewSeedCommand(),
 	}
 }

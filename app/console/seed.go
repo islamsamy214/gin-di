@@ -1,11 +1,17 @@
-package commands
+package console
 
 import (
 	"log"
 	"web-app/database"
 )
 
-func Seed() {
+type SeedCommand struct{}
+
+func NewSeedCommand() *SeedCommand {
+	return &SeedCommand{}
+}
+
+func (command *SeedCommand) Handle(args []string) error {
 	log.Println("Starting the seed command")
 
 	// Intialize the kernel
@@ -17,4 +23,9 @@ func Seed() {
 	}
 
 	log.Println("Seed command completed")
+	return nil
+}
+
+func (command *SeedCommand) Description() string {
+	return "Seeds the database"
 }
