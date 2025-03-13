@@ -8,6 +8,13 @@ import (
 )
 
 func Regester(route *gin.Engine) {
+	// home route
+	route.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Welcome to the home page",
+		})
+	})
+
 	// authentication routes
 	authController := controllers.NewAuthController()
 	route.POST("/login", authController.Login)
