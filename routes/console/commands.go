@@ -9,6 +9,7 @@ import (
 func Register() map[string]interfaces.Command {
 	// Register the command
 	return map[string]interfaces.Command{
-		"example": &console.ExampleCommand{},
+		"example": console.NewExampleCommand(),
+		"migrate": console.NewMigrateCommand(),
 	}
 }
