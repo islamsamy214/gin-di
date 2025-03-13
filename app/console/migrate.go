@@ -1,4 +1,4 @@
-package commands
+package console
 
 import (
 	"log"
@@ -8,31 +8,33 @@ import (
 	"web-app/database/migrations"
 )
 
+type MigrateCommand struct{}
+
+func NewMigrateCommand() *MigrateCommand {
+	return &MigrateCommand{}
+}
+
 /*
  * Migrate runs all the migrations
  */
-func Migrate() {
+func (command *MigrateCommand) Handle(args []string) error {
 	var db, _ = core.NewPostgresService()
 
 	log.Println("Migrating the database...")
-	// Initialize the kernel
 	migrationsKernel := database.NewKernel()
 
 	// Check the migrated tables
 	migratedTables, err := db.Read(`SELECT name FROM migrations`)
-
-	// Check if migrations table does not exist create it
 	if err != nil {
 		if err.Error() == `pq: relation "migrations" does not exist` {
-			// Create the migrations table
 			(&migrations.Migrate{}).Up()
 			migratedTables, _ = db.Read(`SELECT name FROM migrations`)
 		} else {
 			log.Printf("Unexpected error: %v", err)
+			return err
 		}
 	}
 
-	// Get the un-migrated tables
 	var unmigratedTables []string
 	for migratedTables.Next() {
 		var tableName string
@@ -40,40 +42,16 @@ func Migrate() {
 		unmigratedTables = append(unmigratedTables, tableName)
 	}
 
-	// Loop through all the migrations
 	for table, migration := range migrationsKernel.Migrations {
-		// Check if the migration has been run
 		if !slices.Contains(unmigratedTables, table) {
 			migration.Up()
 		}
-
 	}
 
 	log.Println("Database migrated")
+	return nil // Ensure an explicit `nil` return on success
 }
 
-/*
- * Rollback rolls back all the migrations
- */
-func Rollback(args []string) {
-	log.Println("Rolling back the database...")
-	// Initialize the kernel
-	dbKernel := database.NewKernel()
-
-	// if args[4] is set, then rollback only that migration
-	if len(args) > 3 {
-		for table, migration := range dbKernel.Migrations {
-			if table == args[3] {
-				migration.Down()
-			}
-		}
-		return
-	}
-
-	// Loop through all the migrations in reverse order
-	for _, migration := range dbKernel.Migrations {
-		migration.Down()
-	}
-
-	log.Println("Database rolled back")
+func (command *MigrateCommand) Description() string {
+	return "Migrates the database"
 }
