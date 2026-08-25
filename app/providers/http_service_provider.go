@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"errors"
+	"log"
 	"net/http"
 	"time"
 	"web-app/app/http/middlewares"
+	"web-app/app/services"
 	"web-app/configs"
 	httpApis "web-app/routes/http"
 
@@ -20,28 +23,41 @@ func (provider *HttpServiceProvider) Boot() {
 	// Initialize gin engine
 	provider.init()
 
+	// Composition root: config is resolved once here, then injected downward.
+	jwtConfig, err := configs.NewJwtConfig()
+	if err != nil {
+		log.Fatalf("boot: %v", err)
+	}
+
+	authService := services.NewAuthService(jwtConfig)
+
 	// Create a new gin router
 	router := gin.New()
 
 	// Register the routes
-	provider.Register(router)
+	provider.Register(router, authService)
 
 	// Add global middleware
 	provider.GlobalMiddleware(router)
 
 	// Start the server
-	(&http.Server{
+	serverErr := (&http.Server{
 		Addr:           configs.NewAppConfig().Host + ":" + configs.NewAppConfig().Port,
 		Handler:        router,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}).ListenAndServe()
+
+	// A closed server is an orderly shutdown; anything else must not exit 0.
+	if serverErr != nil && !errors.Is(serverErr, http.ErrServerClosed) {
+		log.Fatalf("http server: %v", serverErr)
+	}
 }
 
-func (provider *HttpServiceProvider) Register(router *gin.Engine) {
+func (provider *HttpServiceProvider) Register(router *gin.Engine, auth *services.AuthService) {
 	// Register the routes
-	httpApis.Regester(router)
+	httpApis.Regester(router, auth)
 }
 
 func (provider *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {

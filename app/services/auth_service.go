@@ -5,79 +5,94 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"time"
 	"web-app/app/models"
 	"web-app/configs"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/argon2"
 )
 
-var (
-	// Define a secret key for signing tokens. This should be securely stored in a real-world application.
-	secretKey = []byte(configs.NewJwtConfig().SecretKey)
-)
+// AuthService issues and verifies access tokens. Its JWT settings are injected
+// rather than resolved here, so nothing in this package reads the environment.
+type AuthService struct {
+	jwt *configs.JwtConfig
+}
+
+func NewAuthService(jwtConfig *configs.JwtConfig) *AuthService {
+	return &AuthService{jwt: jwtConfig}
+}
 
 // Claims represents the JWT claims structure
 type Claims struct {
 	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 // GenerateToken generates a new JWT token with the provided user ID
-func GenerateToken(userID int64, username string) (string, error) {
-	// Create a new set of claims
+func (s *AuthService) GenerateToken(userID int64, username string) (string, error) {
+	now := time.Now()
+
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(), // Token expiration time
-			Issuer:    "github@islamsamy214",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.jwt.TTL)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			Issuer:    s.jwt.Issuer,
 		},
 	}
 
-	// Create the token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Sign the token with our secret key
-	signedToken, err := token.SignedString(secretKey)
+	signedToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwt.SecretKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("signing token: %w", err)
 	}
 
 	return signedToken, nil
 }
 
 // ParseToken parses the provided JWT token string and returns the claims if the token is valid
-func ParseToken(tokenStr string) (*Claims, error) {
-	// Parse the token
-	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
-	})
+func (s *AuthService) ParseToken(tokenStr string) (*Claims, error) {
+	// WithValidMethods pins HS256 so a token cannot dictate its own algorithm.
+	token, err := jwt.ParseWithClaims(tokenStr, &Claims{},
+		func(*jwt.Token) (any, error) { return s.jwt.SecretKey, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithIssuer(s.jwt.Issuer),
+		jwt.WithExpirationRequired(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("parsing token: %w", err)
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, jwt.ErrTokenInvalidClaims
+	}
+
+	return claims, nil
+}
+
+// AttemptLogin verifies the supplied credentials and returns the matching user
+func (s *AuthService) AttemptLogin(user *models.User, password string) (*models.User, error) {
+	// Get the user from the database
+	user, err := GetUserByUsername(user)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	// Verify the password
+	match, err := VerifyPassword(user.Password, password)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if the token is valid
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
-	} else {
-		return nil, jwt.ErrSignatureInvalid
-	}
-}
-
-// ValidateToken validates the provided JWT token string
-func ValidateToken(tokenStr string) error {
-	// Parse the token
-	_, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
-	})
-	if err != nil {
-		return err
+	if !match {
+		return nil, errors.New("invalid credentials")
 	}
 
-	return nil
+	return user, nil
 }
 
 // HashPassword hashes the provided password using the Argon2id key derivation function
@@ -118,26 +133,6 @@ func VerifyPassword(hashedPassword, password string) (bool, error) {
 
 	// Compare the new hash with the stored hash
 	return subtle.ConstantTimeCompare(newHash, storedHash) == 1, nil
-}
-
-func AttemptLogin(user *models.User, password string) (*models.User, error) {
-	// Get the user from the database
-	user, err := GetUserByUsername(user)
-	if err != nil {
-		return nil, errors.New("invalid credentials")
-	}
-
-	// Verify the password
-	match, err := VerifyPassword(user.Password, password)
-	if err != nil {
-		return nil, err
-	}
-
-	if !match {
-		return nil, errors.New("invalid credentials")
-	}
-
-	return user, nil
 }
 
 func GetUserByUsername(u *models.User) (*models.User, error) {

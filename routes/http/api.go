@@ -3,11 +3,12 @@ package http
 import (
 	"web-app/app/http/controllers"
 	"web-app/app/http/middlewares"
+	"web-app/app/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Regester(route *gin.Engine) {
+func Regester(route *gin.Engine, auth *services.AuthService) {
 	// home route
 	route.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -16,17 +17,18 @@ func Regester(route *gin.Engine) {
 	})
 
 	// authentication routes
-	authController := controllers.NewAuthController()
+	authController := controllers.NewAuthController(auth)
 	route.POST("/login", authController.Login)
 
 	// events routes
+	authenticate := middlewares.Authenticate(auth)
 	eventController := controllers.NewEventController()
-	route.GET("/events", middlewares.Authenticate, eventController.Index)
-	route.POST("/events", middlewares.Authenticate, eventController.Create)
+	route.GET("/events", authenticate, eventController.Index)
+	route.POST("/events", authenticate, eventController.Create)
 
 	// // group it to middleware
 	// auth := route.Group("/events")
-	// auth.Use(middlewares.Authenticate)
+	// auth.Use(authenticate)
 	// auth.POST("", eventController.Create)
 	// auth.PUT("/:id", eventController.Update)
 	// auth.DELETE("/:id", eventController.Delete)

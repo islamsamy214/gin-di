@@ -8,13 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthController struct{}
-
-func NewAuthController() *AuthController {
-	return &AuthController{}
+type AuthController struct {
+	auth *services.AuthService
 }
 
-func (*AuthController) Login(ctx *gin.Context) {
+func NewAuthController(auth *services.AuthService) *AuthController {
+	return &AuthController{auth: auth}
+}
+
+func (controller *AuthController) Login(ctx *gin.Context) {
 	user := models.NewUserModel()
 	err := ctx.ShouldBindJSON(&user)
 	if err != nil {
@@ -22,13 +24,13 @@ func (*AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	loginUser, err := services.AttemptLogin(user, user.Password)
+	loginUser, err := controller.auth.AttemptLogin(user, user.Password)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	token, err := services.GenerateToken(loginUser.ID, loginUser.Username)
+	token, err := controller.auth.GenerateToken(loginUser.ID, loginUser.Username)
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
