@@ -6,37 +6,10 @@ import (
 	"time"
 	"web-app/app/services"
 	"web-app/configs"
+	"web-app/tests/support"
 
 	"github.com/golang-jwt/jwt/v5"
 )
-
-const (
-	testSecret  = "unit-test-secret-key-of-at-least-32-bytes"
-	otherSecret = "another-unit-secret-key-of-at-least-32-bytes"
-)
-
-// jwtConfig resolves a real config from the environment, so the tests exercise
-// the same path the HTTP provider and console commands use.
-func jwtConfig(t *testing.T, secret string) *configs.JwtConfig {
-	t.Helper()
-
-	t.Setenv("JWT_SECRET", secret)
-
-	cfg, err := configs.NewJwtConfig()
-	if err != nil {
-		t.Fatalf("NewJwtConfig() = %v, want nil", err)
-	}
-
-	return cfg
-}
-
-func authService(t *testing.T, secret string) (*services.AuthService, *configs.JwtConfig) {
-	t.Helper()
-
-	cfg := jwtConfig(t, secret)
-
-	return services.NewAuthService(cfg), cfg
-}
 
 // signWith mints a token bypassing GenerateToken, so tests can forge claims and
 // signing methods that GenerateToken would never produce.
@@ -68,7 +41,7 @@ func validClaims(cfg *configs.JwtConfig) *services.Claims {
 }
 
 func TestGenerateTokenParseTokenRoundTrip(t *testing.T) {
-	auth, cfg := authService(t, testSecret)
+	auth, cfg := support.AuthServiceWithConfig(t, support.TestSecret)
 
 	const (
 		wantUserID   = int64(42)
@@ -112,7 +85,7 @@ func TestGenerateTokenParseTokenRoundTrip(t *testing.T) {
 }
 
 func TestParseTokenRejectsInvalidTokens(t *testing.T) {
-	auth, cfg := authService(t, testSecret)
+	auth, cfg := support.AuthServiceWithConfig(t, support.TestSecret)
 
 	expiredClaims := validClaims(cfg)
 	expiredClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Hour))
@@ -131,7 +104,7 @@ func TestParseTokenRejectsInvalidTokens(t *testing.T) {
 	}{
 		{
 			name:    "signed with a different key",
-			token:   signWith(t, jwt.SigningMethodHS256, []byte(otherSecret), validClaims(cfg)),
+			token:   signWith(t, jwt.SigningMethodHS256, []byte(support.OtherSecret), validClaims(cfg)),
 			wantErr: jwt.ErrTokenSignatureInvalid,
 		},
 		{
@@ -183,7 +156,7 @@ func TestParseTokenRejectsInvalidTokens(t *testing.T) {
 // The alg:none family is the algorithm-confusion attack the WithValidMethods
 // pin exists to stop, so it gets its own test rather than a table row.
 func TestParseTokenRejectsAlgNone(t *testing.T) {
-	auth, cfg := authService(t, testSecret)
+	auth, cfg := support.AuthServiceWithConfig(t, support.TestSecret)
 
 	tokenStr := signWith(t, jwt.SigningMethodNone, jwt.UnsafeAllowNoneSignatureType, validClaims(cfg))
 

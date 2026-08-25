@@ -5,6 +5,7 @@ import (
 	"web-app/app/console"
 	"web-app/app/console/jwt"
 	"web-app/app/console/migrations"
+	"web-app/app/console/test"
 	"web-app/app/interfaces"
 )
 
@@ -12,7 +13,7 @@ func Register() map[string]interfaces.Command {
 	// Register the command
 	return map[string]interfaces.Command{
 		"example": console.NewExampleCommand(),
-		"test":    console.NewTestCommand(),
+		"test":    test.NewCommand(),
 
 		// Database commands
 		"migrate":         migrations.NewMigrateCommand(),

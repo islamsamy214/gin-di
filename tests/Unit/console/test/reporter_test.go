@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"web-app/app/console"
+	"web-app/app/console/test"
 )
 
 // Colour is left off throughout so the assertions compare plain text.
@@ -27,7 +27,7 @@ func TestHumanizeTestName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := console.HumanizeTestName(tt.in); got != tt.want {
+			if got := test.HumanizeTestName(tt.in); got != tt.want {
 				t.Errorf("HumanizeTestName(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
@@ -35,12 +35,12 @@ func TestHumanizeTestName(t *testing.T) {
 }
 
 // report drives the reporter with a sequence of events and returns its output.
-func report(t *testing.T, events []console.TestEvent) string {
+func report(t *testing.T, events []test.Event) string {
 	t.Helper()
 
 	var out strings.Builder
 
-	reporter := &console.TestReporter{Out: &out}
+	reporter := &test.Reporter{Out: &out}
 
 	for _, event := range events {
 		reporter.Handle(event)
@@ -52,7 +52,7 @@ func report(t *testing.T, events []console.TestEvent) string {
 }
 
 func TestReporterPrintsPassedTests(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestLogin"},
 		{Action: "pass", Package: "web-app/tests/Unit", Test: "TestLogin", Elapsed: 0.5},
 		{Action: "pass", Package: "web-app/tests/Unit"},
@@ -68,7 +68,7 @@ func TestReporterPrintsPassedTests(t *testing.T) {
 // The toolchain reports a parent only after its children, but starts it first,
 // so run order is what keeps the nesting right.
 func TestReporterPutsParentBeforeSubtests(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestParent"},
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestParent/first_case"},
 		{Action: "pass", Package: "web-app/tests/Unit", Test: "TestParent/first_case"},
@@ -92,7 +92,7 @@ func TestReporterPutsParentBeforeSubtests(t *testing.T) {
 }
 
 func TestReporterIndentsSubtests(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestParent"},
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestParent/child"},
 		{Action: "pass", Package: "web-app/tests/Unit", Test: "TestParent/child"},
@@ -111,7 +111,7 @@ func TestReporterIndentsSubtests(t *testing.T) {
 
 // A package's results must appear together, even when packages interleave.
 func TestReporterGroupsEachPackageOnce(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestOne"},
 		{Action: "run", Package: "web-app/tests/Feature", Test: "TestTwo"},
 		{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOne"},
@@ -130,7 +130,7 @@ func TestReporterGroupsEachPackageOnce(t *testing.T) {
 }
 
 func TestReporterCountsSkips(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Feature", Test: "TestNeedsDatabase"},
 		{Action: "skip", Package: "web-app/tests/Feature", Test: "TestNeedsDatabase"},
 		{Action: "pass", Package: "web-app/tests/Feature"},
@@ -147,7 +147,7 @@ func TestReporterCountsSkips(t *testing.T) {
 
 // A package with no test files is a package-level skip, not a skipped test.
 func TestReporterCountsPackagesWithoutTests(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "skip", Package: "web-app/app/models"},
 		{Action: "skip", Package: "web-app/configs"},
 	})
@@ -164,9 +164,9 @@ func TestReporterCountsPackagesWithoutTests(t *testing.T) {
 func TestReporterReportsFailuresWithOutput(t *testing.T) {
 	var out strings.Builder
 
-	reporter := &console.TestReporter{Out: &out}
+	reporter := &test.Reporter{Out: &out}
 
-	for _, event := range []console.TestEvent{
+	for _, event := range []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestBroken"},
 		{Action: "output", Package: "web-app/tests/Unit", Test: "TestBroken", Output: "=== RUN   TestBroken\n"},
 		{Action: "output", Package: "web-app/tests/Unit", Test: "TestBroken", Output: "    some_test.go:12: status = 500, want 200\n"},
@@ -199,10 +199,10 @@ func TestReporterReportsFailuresWithOutput(t *testing.T) {
 func TestReporterSummaryReturnsTrueWhenAllPass(t *testing.T) {
 	var out strings.Builder
 
-	reporter := &console.TestReporter{Out: &out}
-	reporter.Handle(console.TestEvent{Action: "run", Package: "web-app/tests/Unit", Test: "TestOne"})
-	reporter.Handle(console.TestEvent{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOne"})
-	reporter.Handle(console.TestEvent{Action: "pass", Package: "web-app/tests/Unit"})
+	reporter := &test.Reporter{Out: &out}
+	reporter.Handle(test.Event{Action: "run", Package: "web-app/tests/Unit", Test: "TestOne"})
+	reporter.Handle(test.Event{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOne"})
+	reporter.Handle(test.Event{Action: "pass", Package: "web-app/tests/Unit"})
 
 	if !reporter.Summary(time.Second) {
 		t.Error("Summary() = false, want true when everything passed")
@@ -211,7 +211,7 @@ func TestReporterSummaryReturnsTrueWhenAllPass(t *testing.T) {
 
 // A package that never reports a result must not swallow its tests.
 func TestReporterFlushesUnfinishedPackagesOnSummary(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestOrphan"},
 		{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOrphan"},
 	})
@@ -231,7 +231,7 @@ func TestReporterHandlesNoTestsAtAll(t *testing.T) {
 
 // Colour must stay out of piped output.
 func TestReporterOmitsColourWhenDisabled(t *testing.T) {
-	output := report(t, []console.TestEvent{
+	output := report(t, []test.Event{
 		{Action: "run", Package: "web-app/tests/Unit", Test: "TestOne"},
 		{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOne"},
 		{Action: "pass", Package: "web-app/tests/Unit"},
@@ -245,10 +245,10 @@ func TestReporterOmitsColourWhenDisabled(t *testing.T) {
 func TestReporterEmitsColourWhenEnabled(t *testing.T) {
 	var out strings.Builder
 
-	reporter := &console.TestReporter{Out: &out, Color: true}
-	reporter.Handle(console.TestEvent{Action: "run", Package: "web-app/tests/Unit", Test: "TestOne"})
-	reporter.Handle(console.TestEvent{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOne"})
-	reporter.Handle(console.TestEvent{Action: "pass", Package: "web-app/tests/Unit"})
+	reporter := &test.Reporter{Out: &out, Color: true}
+	reporter.Handle(test.Event{Action: "run", Package: "web-app/tests/Unit", Test: "TestOne"})
+	reporter.Handle(test.Event{Action: "pass", Package: "web-app/tests/Unit", Test: "TestOne"})
+	reporter.Handle(test.Event{Action: "pass", Package: "web-app/tests/Unit"})
 	reporter.Summary(time.Second)
 
 	if !strings.Contains(out.String(), "\033[") {

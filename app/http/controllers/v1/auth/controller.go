@@ -1,4 +1,4 @@
-package v1
+package auth
 
 import (
 	"net/http"
@@ -8,15 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthController struct {
+type Controller struct {
 	auth *services.AuthService
 }
 
-func NewAuthController(auth *services.AuthService) *AuthController {
-	return &AuthController{auth: auth}
+func NewController(auth *services.AuthService) *Controller {
+	return &Controller{auth: auth}
 }
 
-func (controller *AuthController) Login(ctx *gin.Context) {
+func (controller *Controller) Login(ctx *gin.Context) {
 	user := models.NewUserModel()
 	err := ctx.ShouldBindJSON(&user)
 	if err != nil {

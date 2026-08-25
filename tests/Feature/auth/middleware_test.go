@@ -1,41 +1,22 @@
-package feature
+package auth
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"web-app/app/http/middlewares"
 	"web-app/app/services"
-	"web-app/configs"
+	"web-app/tests/support"
 
 	"github.com/gin-gonic/gin"
 )
-
-const (
-	testSecret  = "feature-test-secret-key-of-32-plus-bytes"
-	otherSecret = "another-feature-secret-key-of-32-plus-bytes"
-)
-
-// authService resolves a real config from the environment and builds the
-// service from it, the same way the HTTP provider does at boot.
-func authService(t *testing.T, secret string) *services.AuthService {
-	t.Helper()
-
-	t.Setenv("JWT_SECRET", secret)
-
-	cfg, err := configs.NewJwtConfig()
-	if err != nil {
-		t.Fatalf("NewJwtConfig() = %v, want nil", err)
-	}
-
-	return services.NewAuthService(cfg)
-}
 
 // newTestRouter mounts a protected route behind the real middleware, so these
 // tests exercise the same gin.Recovery stack production runs.
 func newTestRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 	t.Helper()
 
-	auth := authService(t, testSecret)
+	auth := support.AuthService(t, support.TestSecret)
 
 	gin.SetMode(gin.TestMode)
 
@@ -82,7 +63,7 @@ func TestProtectedRouteRejectsMalformedHeaders(t *testing.T) {
 func TestProtectedRouteRejectsForeignlySignedToken(t *testing.T) {
 	router, _ := newTestRouter(t)
 
-	forged, err := authService(t, otherSecret).GenerateToken(1, "attacker")
+	forged, err := support.AuthService(t, support.OtherSecret).GenerateToken(1, "attacker")
 	if err != nil {
 		t.Fatalf("GenerateToken() = %v, want nil", err)
 	}
@@ -120,4 +101,12 @@ func TestProtectedRouteAcceptsValidToken(t *testing.T) {
 	if body := res.Body.String(); body != `{"userId":42,"username":"islacks"}` {
 		t.Errorf("body = %s, want the claims echoed back", body)
 	}
+}
+
+// get issues a GET against the throwaway /protected route above. It is local to
+// this file on purpose: /protected exists only for these middleware tests.
+func get(t *testing.T, router *gin.Engine, authorization string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	return support.GetPath(t, router, "/protected", authorization)
 }

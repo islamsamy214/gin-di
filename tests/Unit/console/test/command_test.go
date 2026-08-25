@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"web-app/app/console"
+	"web-app/app/console/test"
 )
 
 // Only the pure argument builder and the non-executing flag paths are covered
@@ -12,7 +12,7 @@ import (
 // recurse into this very suite.
 
 func TestGoTestArgsDefaults(t *testing.T) {
-	args := console.GoTestArgs(console.TestOptions{})
+	args := test.GoTestArgs(test.Options{})
 
 	if args[0] != "test" {
 		t.Errorf("args[0] = %q, want \"test\"", args[0])
@@ -42,18 +42,18 @@ func TestGoTestArgsDefaults(t *testing.T) {
 func TestGoTestArgsFlags(t *testing.T) {
 	tests := []struct {
 		name    string
-		options console.TestOptions
+		options test.Options
 		want    string
 	}{
-		{name: "raw uses -v", options: console.TestOptions{Raw: true}, want: "-v"},
-		{name: "race", options: console.TestOptions{Race: true}, want: "-race"},
-		{name: "coverage", options: console.TestOptions{Coverage: true}, want: "-cover"},
-		{name: "coverage adds coverpkg", options: console.TestOptions{Coverage: true}, want: "-coverpkg=./..."},
+		{name: "raw uses -v", options: test.Options{Raw: true}, want: "-v"},
+		{name: "race", options: test.Options{Race: true}, want: "-race"},
+		{name: "coverage", options: test.Options{Coverage: true}, want: "-cover"},
+		{name: "coverage adds coverpkg", options: test.Options{Coverage: true}, want: "-coverpkg=./..."},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := console.GoTestArgs(tt.options)
+			args := test.GoTestArgs(tt.options)
 
 			if !slices.Contains(args, tt.want) {
 				t.Errorf("args = %v, want it to contain %s", args, tt.want)
@@ -64,7 +64,7 @@ func TestGoTestArgsFlags(t *testing.T) {
 
 // --cache opts back into the toolchain's result cache.
 func TestGoTestArgsCacheDropsCountOne(t *testing.T) {
-	args := console.GoTestArgs(console.TestOptions{Cache: true})
+	args := test.GoTestArgs(test.Options{Cache: true})
 
 	if slices.Contains(args, "-count=1") {
 		t.Errorf("args = %v, want no -count=1 when caching is allowed", args)
@@ -74,7 +74,7 @@ func TestGoTestArgsCacheDropsCountOne(t *testing.T) {
 func TestGoTestArgsFilterBecomesRun(t *testing.T) {
 	const filter = "TestLoginWithFactoryUser"
 
-	args := console.GoTestArgs(console.TestOptions{Filter: filter})
+	args := test.GoTestArgs(test.Options{Filter: filter})
 
 	index := slices.Index(args, "-run")
 	if index == -1 {
@@ -89,7 +89,7 @@ func TestGoTestArgsFilterBecomesRun(t *testing.T) {
 
 // Extra arguments must reach the toolchain, but never after the package pattern.
 func TestGoTestArgsPassesExtraThrough(t *testing.T) {
-	args := console.GoTestArgs(console.TestOptions{Extra: []string{"-timeout=30s", "-shuffle=on"}})
+	args := test.GoTestArgs(test.Options{Extra: []string{"-timeout=30s", "-shuffle=on"}})
 
 	for _, extra := range []string{"-timeout=30s", "-shuffle=on"} {
 		index := slices.Index(args, extra)
@@ -104,7 +104,7 @@ func TestGoTestArgsPassesExtraThrough(t *testing.T) {
 }
 
 func TestGoTestArgsCombinesEverything(t *testing.T) {
-	args := console.GoTestArgs(console.TestOptions{
+	args := test.GoTestArgs(test.Options{
 		Filter:   "TestLogin",
 		Coverage: true,
 		Race:     true,
@@ -121,20 +121,20 @@ func TestGoTestArgsCombinesEverything(t *testing.T) {
 
 // -h prints usage and stops; it must not shell out or report failure.
 func TestTestCommandHelpIsNotAnError(t *testing.T) {
-	if err := console.NewTestCommand().Handle([]string{"-h"}); err != nil {
+	if err := test.NewCommand().Handle([]string{"-h"}); err != nil {
 		t.Errorf("Handle(-h) = %v, want nil", err)
 	}
 }
 
 // An unknown flag must be rejected before anything is executed.
 func TestTestCommandRejectsUnknownFlag(t *testing.T) {
-	if err := console.NewTestCommand().Handle([]string{"--nope"}); err == nil {
+	if err := test.NewCommand().Handle([]string{"--nope"}); err == nil {
 		t.Error("Handle(--nope) = nil error, want an error")
 	}
 }
 
 func TestTestCommandHasDescription(t *testing.T) {
-	if console.NewTestCommand().Description() == "" {
+	if test.NewCommand().Description() == "" {
 		t.Error("Description() = empty, want a description")
 	}
 }
@@ -142,7 +142,34 @@ func TestTestCommandHasDescription(t *testing.T) {
 // The command's --db flag and the Feature suite's gate must name the same
 // variable, or --db would silently fail to enable anything.
 func TestDatabaseTestsEnvIsExported(t *testing.T) {
-	if console.DatabaseTestsEnv != "TEST_DB" {
-		t.Errorf("DatabaseTestsEnv = %q, want TEST_DB", console.DatabaseTestsEnv)
+	if test.DatabaseTestsEnv != "TEST_DB" {
+		t.Errorf("DatabaseTestsEnv = %q, want TEST_DB", test.DatabaseTestsEnv)
+	}
+}
+
+/*
+ * The database tests share one schema and drop every table, so the packages
+ * that touch it must not run concurrently. -p 1 is the guard; without it the
+ * two Feature packages tear down each other's fixtures.
+ */
+func TestGoTestArgsSerialisesDatabaseRuns(t *testing.T) {
+	args := test.GoTestArgs(test.Options{Database: true})
+
+	index := slices.Index(args, "-p")
+	if index == -1 {
+		t.Fatalf("args = %v, want -p when the database tests are included", args)
+	}
+
+	if index+1 >= len(args) || args[index+1] != "1" {
+		t.Errorf("args = %v, want -p followed by 1", args)
+	}
+}
+
+// Runs that skip the database keep full package parallelism.
+func TestGoTestArgsKeepsParallelismWithoutDatabase(t *testing.T) {
+	args := test.GoTestArgs(test.Options{})
+
+	if slices.Contains(args, "-p") {
+		t.Errorf("args = %v, want no -p when the database tests are skipped", args)
 	}
 }

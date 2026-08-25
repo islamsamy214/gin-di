@@ -1,4 +1,4 @@
-package console
+package test
 
 import (
 	"bufio"
@@ -26,24 +26,25 @@ const (
 )
 
 /*
- * TestOptions describes one test run.
+ * Options describes one test run.
  *
  * Separated from the flag set so the arguments can be built and asserted on
  * without executing anything.
  */
-type TestOptions struct {
+type Options struct {
 	Filter   string
 	Coverage bool
 	Race     bool
 	Cache    bool
 	Raw      bool
+	Database bool
 	Extra    []string
 }
 
-type TestCommand struct{}
+type Command struct{}
 
-func NewTestCommand() *TestCommand {
-	return &TestCommand{}
+func NewCommand() *Command {
+	return &Command{}
 }
 
 /*
@@ -52,7 +53,7 @@ func NewTestCommand() *TestCommand {
  * Every test is reported as it finishes, followed by a summary. A failing
  * suite surfaces as a non-zero exit.
  */
-func (command *TestCommand) Handle(args []string) error {
+func (command *Command) Handle(args []string) error {
 	flags := flag.NewFlagSet("test", flag.ContinueOnError)
 	filter := flags.String("filter", "", "run only tests whose name matches this regular expression")
 	coverage := flags.Bool("coverage", false, "report statement coverage per package")
@@ -70,12 +71,13 @@ func (command *TestCommand) Handle(args []string) error {
 		return fmt.Errorf("parsing flags: %w", err)
 	}
 
-	options := TestOptions{
+	options := Options{
 		Filter:   *filter,
 		Coverage: *coverage,
 		Race:     *race,
 		Cache:    *cache,
 		Raw:      *raw,
+		Database: *withDatabase,
 		Extra:    flags.Args(),
 	}
 
@@ -104,7 +106,7 @@ func (command *TestCommand) Handle(args []string) error {
 	return command.runReported(suite)
 }
 
-func (command *TestCommand) Description() string {
+func (command *Command) Description() string {
 	return "Runs the test suite (--filter, --coverage, --race, --db, --raw)"
 }
 
@@ -113,7 +115,7 @@ func (command *TestCommand) Description() string {
  *
  * @return error If the suite failed, or its output could not be read.
  */
-func (command *TestCommand) runReported(suite *exec.Cmd) error {
+func (command *Command) runReported(suite *exec.Cmd) error {
 	stdout, err := suite.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("capturing test output: %w", err)
@@ -125,7 +127,7 @@ func (command *TestCommand) runReported(suite *exec.Cmd) error {
 		return fmt.Errorf("starting the test suite: %w", err)
 	}
 
-	reporter := &TestReporter{Out: os.Stdout, Color: IsTerminal(os.Stdout)}
+	reporter := &Reporter{Out: os.Stdout, Color: IsTerminal(os.Stdout)}
 
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), outputBufferLimit)
@@ -133,7 +135,7 @@ func (command *TestCommand) runReported(suite *exec.Cmd) error {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
-		var event TestEvent
+		var event Event
 
 		// Build failures and toolchain notices are not JSON records, so they
 		// are passed through rather than swallowed.
@@ -179,7 +181,7 @@ func (command *TestCommand) runReported(suite *exec.Cmd) error {
  *
  * @return error If the suite failed.
  */
-func (command *TestCommand) runRaw(suite *exec.Cmd) error {
+func (command *Command) runRaw(suite *exec.Cmd) error {
 	stdout := &LineFilter{Out: os.Stdout, Drop: IsNoTestFilesLine}
 	suite.Stdout = stdout
 
@@ -214,7 +216,7 @@ func (command *TestCommand) runRaw(suite *exec.Cmd) error {
  *
  * @return []string The full argument list, starting with "test".
  */
-func GoTestArgs(options TestOptions) []string {
+func GoTestArgs(options Options) []string {
 	args := []string{"test"}
 
 	// -json carries one record per test, which is what lets every result be
@@ -240,6 +242,14 @@ func GoTestArgs(options TestOptions) []string {
 	// database tests whose outcome depends on state the cache cannot see.
 	if !options.Cache {
 		args = append(args, "-count=1")
+	}
+
+	// The database tests share one schema and every FreshDatabase call drops
+	// every table, so two packages running at once would tear down each other's
+	// fixtures. -p 1 runs one test binary at a time; only database runs pay for
+	// it, because only they touch shared state.
+	if options.Database {
+		args = append(args, "-p", "1")
 	}
 
 	if options.Filter != "" {

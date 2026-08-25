@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"web-app/app/console"
+	"web-app/app/console/test"
 )
 
 func TestIsNoTestFilesLine(t *testing.T) {
@@ -24,7 +24,7 @@ func TestIsNoTestFilesLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := console.IsNoTestFilesLine(tt.line); got != tt.want {
+			if got := test.IsNoTestFilesLine(tt.line); got != tt.want {
 				t.Errorf("IsNoTestFilesLine(%q) = %v, want %v", tt.line, got, tt.want)
 			}
 		})
@@ -34,7 +34,7 @@ func TestIsNoTestFilesLine(t *testing.T) {
 func TestLineFilterDropsMatchingLines(t *testing.T) {
 	var out strings.Builder
 
-	filter := &console.LineFilter{Out: &out, Drop: console.IsNoTestFilesLine}
+	filter := &test.LineFilter{Out: &out, Drop: test.IsNoTestFilesLine}
 
 	input := "?   \tweb-app\t[no test files]\n" +
 		"ok  \tweb-app/tests/Unit\t0.126s\n" +
@@ -66,7 +66,7 @@ func TestLineFilterDropsMatchingLines(t *testing.T) {
 func TestLineFilterHandlesLinesSplitAcrossWrites(t *testing.T) {
 	var out strings.Builder
 
-	filter := &console.LineFilter{Out: &out, Drop: console.IsNoTestFilesLine}
+	filter := &test.LineFilter{Out: &out, Drop: test.IsNoTestFilesLine}
 
 	// "[no test files]" straddles the boundary and must still be dropped.
 	for _, chunk := range []string{"?   \tweb-app\t[no te", "st files]\nok  \tweb-app/tests/Unit\t0.1", "26s\n"} {
@@ -94,7 +94,7 @@ func TestLineFilterHandlesLinesSplitAcrossWrites(t *testing.T) {
 func TestLineFilterHandlesByteAtATimeWrites(t *testing.T) {
 	var out strings.Builder
 
-	filter := &console.LineFilter{Out: &out, Drop: console.IsNoTestFilesLine}
+	filter := &test.LineFilter{Out: &out, Drop: test.IsNoTestFilesLine}
 
 	input := "?   \tweb-app\t[no test files]\nFAIL\tweb-app/tests/Unit\t0.005s\n"
 
@@ -119,7 +119,7 @@ func TestLineFilterHandlesByteAtATimeWrites(t *testing.T) {
 func TestLineFilterFlushesTrailingLine(t *testing.T) {
 	var out strings.Builder
 
-	filter := &console.LineFilter{Out: &out, Drop: console.IsNoTestFilesLine}
+	filter := &test.LineFilter{Out: &out, Drop: test.IsNoTestFilesLine}
 
 	if _, err := filter.Write([]byte("FAIL\tweb-app/tests/Unit\t0.005s")); err != nil {
 		t.Fatalf("Write() = %v, want nil", err)
@@ -142,7 +142,7 @@ func TestLineFilterFlushesTrailingLine(t *testing.T) {
 func TestLineFilterWithoutDropPassesEverything(t *testing.T) {
 	var out strings.Builder
 
-	filter := &console.LineFilter{Out: &out}
+	filter := &test.LineFilter{Out: &out}
 
 	input := "?   \tweb-app\t[no test files]\nok  \tweb-app/tests/Unit\t0.1s\n"
 
@@ -163,7 +163,7 @@ func TestLineFilterWithoutDropPassesEverything(t *testing.T) {
 func TestLineFilterReportsAllBytesConsumed(t *testing.T) {
 	var out strings.Builder
 
-	filter := &console.LineFilter{Out: &out, Drop: console.IsNoTestFilesLine}
+	filter := &test.LineFilter{Out: &out, Drop: test.IsNoTestFilesLine}
 
 	input := []byte("?   \tweb-app\t[no test files]\n")
 
@@ -184,7 +184,7 @@ func (failingOut) Write([]byte) (int, error) {
 }
 
 func TestLineFilterSurfacesWriteErrors(t *testing.T) {
-	filter := &console.LineFilter{Out: failingOut{}, Drop: console.IsNoTestFilesLine}
+	filter := &test.LineFilter{Out: failingOut{}, Drop: test.IsNoTestFilesLine}
 
 	if _, err := filter.Write([]byte("ok  \tweb-app/tests/Unit\t0.1s\n")); err == nil {
 		t.Error("Write() = nil error, want the underlying failure")

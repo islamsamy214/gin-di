@@ -1,4 +1,4 @@
-package feature
+package events
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"web-app/app/http/middlewares"
 	"web-app/app/models"
 	"web-app/database/factories"
+	"web-app/tests/support"
 )
 
 // eventsFrom decodes the {"data": [...]} envelope the events endpoint returns.
@@ -25,9 +26,9 @@ func eventsFrom(t *testing.T, body []byte) []models.Event {
 }
 
 func TestEventsReturnsFactoryEvents(t *testing.T) {
-	freshDatabase(t)
+	support.FreshDatabase(t)
 
-	router, auth := appRouter(t)
+	router, auth := support.AppRouter(t)
 
 	owner, err := factories.UserFactory().State(factories.WithUsername("dave")).CreateOne()
 	if err != nil {
@@ -44,7 +45,7 @@ func TestEventsReturnsFactoryEvents(t *testing.T) {
 		t.Fatalf("GenerateToken() = %v, want nil", err)
 	}
 
-	res := getPath(t, router, v1Path("/events"), middlewares.BearerPrefix+token)
+	res := support.GetPath(t, router, support.V1Path("/events"), middlewares.BearerPrefix+token)
 	if res.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d (body: %s)", res.Code, http.StatusOK, res.Body)
 	}
@@ -80,7 +81,7 @@ func TestEventsReturnsFactoryEvents(t *testing.T) {
 // Each event should land on a distinct day, which is what the factory sequence
 // is for.
 func TestEventFactorySpreadsDates(t *testing.T) {
-	freshDatabase(t)
+	support.FreshDatabase(t)
 
 	owner, err := factories.UserFactory().CreateOne()
 	if err != nil {
@@ -104,9 +105,9 @@ func TestEventFactorySpreadsDates(t *testing.T) {
 }
 
 func TestEventsStillRequiresAuthWithRealRoutes(t *testing.T) {
-	freshDatabase(t)
+	support.FreshDatabase(t)
 
-	router, _ := appRouter(t)
+	router, _ := support.AppRouter(t)
 
 	tests := []struct {
 		name   string
@@ -119,9 +120,48 @@ func TestEventsStillRequiresAuthWithRealRoutes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if res := getPath(t, router, v1Path("/events"), tt.header); res.Code != http.StatusUnauthorized {
+			if res := support.GetPath(t, router, support.V1Path("/events"), tt.header); res.Code != http.StatusUnauthorized {
 				t.Errorf("status = %d, want %d (body: %s)", res.Code, http.StatusUnauthorized, res.Body)
 			}
 		})
+	}
+}
+
+// EventFactory leaves UserId unset on purpose, so a bare Create must fail on
+// the foreign key rather than quietly attaching to whatever id exists.
+func TestEventFactoryWithoutOwnerFails(t *testing.T) {
+	support.FreshDatabase(t)
+
+	if _, err := factories.EventFactory().CreateOne(); err == nil {
+		t.Error("CreateOne() = nil error, want a foreign key failure")
+	}
+}
+
+// Make must not touch the database.
+func TestEventFactoryMakeDoesNotPersist(t *testing.T) {
+	support.FreshDatabase(t)
+
+	made, err := factories.EventFactory().Count(2).Make()
+	if err != nil {
+		t.Fatalf("Make() = %v, want nil", err)
+	}
+
+	if len(made) != 2 {
+		t.Fatalf("made %d events, want 2", len(made))
+	}
+
+	for _, event := range made {
+		if event.ID != 0 {
+			t.Errorf("made event has id %d, want 0 — Make must not insert", event.ID)
+		}
+	}
+
+	stored, err := models.NewEventModel().Paginate(10, 1)
+	if err != nil {
+		t.Fatalf("Paginate() = %v, want nil", err)
+	}
+
+	if len(stored) != 0 {
+		t.Errorf("found %d stored events, want 0", len(stored))
 	}
 }

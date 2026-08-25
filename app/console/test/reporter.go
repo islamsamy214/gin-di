@@ -1,4 +1,4 @@
-package console
+package test
 
 import (
 	"fmt"
@@ -27,12 +27,12 @@ const (
 )
 
 /*
- * TestEvent is one record from `go test -json`.
+ * Event is one record from `go test -json`.
  *
  * Package-level records carry an empty Test, which is how a package result is
  * told apart from an individual test result.
  */
-type TestEvent struct {
+type Event struct {
 	Action  string  `json:"Action"`
 	Package string  `json:"Package"`
 	Test    string  `json:"Test"`
@@ -61,14 +61,14 @@ type packageResults struct {
 }
 
 /*
- * TestReporter renders `go test -json` events as a Laravel-style report.
+ * Reporter renders `go test -json` events as a Laravel-style report.
  *
  * Results are held until their package finishes, then printed together. The
  * toolchain interleaves packages and reports children before parents, so
  * printing on arrival would scatter one package across the output and invert
  * the nesting.
  */
-type TestReporter struct {
+type Reporter struct {
 	Out   io.Writer
 	Color bool
 
@@ -85,7 +85,7 @@ type TestReporter struct {
 /*
  * Handle consumes one event, printing a package's report once it completes.
  */
-func (reporter *TestReporter) Handle(event TestEvent) {
+func (reporter *Reporter) Handle(event Event) {
 	if reporter.packages == nil {
 		reporter.packages = make(map[string]*packageResults)
 		reporter.failedIn = make(map[string]string)
@@ -122,7 +122,7 @@ func (reporter *TestReporter) Handle(event TestEvent) {
 /*
  * handlePackage flushes a finished package, or counts one that had no tests.
  */
-func (reporter *TestReporter) handlePackage(event TestEvent) {
+func (reporter *Reporter) handlePackage(event Event) {
 	switch event.Action {
 	case "skip":
 		// A package with no test files is reported as a skipped package.
@@ -135,7 +135,7 @@ func (reporter *TestReporter) handlePackage(event TestEvent) {
 /*
  * flush prints one package's results in the order its tests started.
  */
-func (reporter *TestReporter) flush(name string) {
+func (reporter *Reporter) flush(name string) {
 	pkg, found := reporter.packages[name]
 	if !found {
 		return
@@ -171,7 +171,7 @@ func (reporter *TestReporter) flush(name string) {
 /*
  * printResult writes one result line, indented by its subtest depth.
  */
-func (reporter *TestReporter) printResult(symbol, color string, result *testResult) {
+func (reporter *Reporter) printResult(symbol, color string, result *testResult) {
 	indent := strings.Repeat("  ", strings.Count(result.name, "/")+1)
 
 	line := fmt.Sprintf("%s%s %s", indent, reporter.paint(symbol, color), HumanizeTestName(result.name))
@@ -189,7 +189,7 @@ func (reporter *TestReporter) printResult(symbol, color string, result *testResu
  *
  * @return bool Whether every test passed.
  */
-func (reporter *TestReporter) Summary(elapsed time.Duration) bool {
+func (reporter *Reporter) Summary(elapsed time.Duration) bool {
 	// Any package still held here never reported a result, so flush it rather
 	// than losing the tests silently.
 	for name := range reporter.packages {
@@ -235,7 +235,7 @@ func (reporter *TestReporter) Summary(elapsed time.Duration) bool {
  * printFailures repeats each failure with its output, so a long run does not
  * require scrolling back to find what broke.
  */
-func (reporter *TestReporter) printFailures() {
+func (reporter *Reporter) printFailures() {
 	if len(reporter.failures) == 0 {
 		return
 	}
@@ -264,7 +264,7 @@ func (reporter *TestReporter) printFailures() {
 }
 
 // paint wraps text in an ANSI colour when the output is a terminal.
-func (reporter *TestReporter) paint(text, color string) string {
+func (reporter *Reporter) paint(text, color string) string {
 	if !reporter.Color {
 		return text
 	}

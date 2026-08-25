@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 	"web-app/configs"
+	"web-app/tests/support"
 )
 
 // unsetEnv makes a variable genuinely absent while still restoring it on
@@ -28,7 +29,7 @@ func unsetEnv(t *testing.T, keys ...string) {
 func defaultConfig(t *testing.T) *configs.JwtConfig {
 	t.Helper()
 
-	t.Setenv("JWT_SECRET", testSecret)
+	t.Setenv("JWT_SECRET", support.TestSecret)
 	unsetEnv(t, "JWT_ISSUER", "JWT_TTL")
 
 	cfg, err := configs.NewJwtConfig()
@@ -62,7 +63,7 @@ func TestNewJwtConfigReadsOverrides(t *testing.T) {
 		wantTTL = 15 * time.Minute
 	)
 
-	t.Setenv("JWT_SECRET", testSecret)
+	t.Setenv("JWT_SECRET", support.TestSecret)
 	t.Setenv("JWT_ISSUER", wantIssuer)
 	t.Setenv("JWT_TTL", "900")
 
@@ -83,7 +84,7 @@ func TestNewJwtConfigReadsOverrides(t *testing.T) {
 // An explicitly blank issuer would disable issuer verification, so it is an
 // error rather than a silent fallback to the default.
 func TestNewJwtConfigRejectsEmptyIssuer(t *testing.T) {
-	t.Setenv("JWT_SECRET", testSecret)
+	t.Setenv("JWT_SECRET", support.TestSecret)
 	t.Setenv("JWT_ISSUER", "")
 
 	cfg, err := configs.NewJwtConfig()
@@ -113,7 +114,7 @@ func TestNewJwtConfigFallsBackOnNonNumericTTL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("JWT_SECRET", testSecret)
+			t.Setenv("JWT_SECRET", support.TestSecret)
 			t.Setenv("JWT_TTL", tt.ttl)
 
 			cfg, err := configs.NewJwtConfig()
@@ -141,7 +142,7 @@ func TestNewJwtConfigRejectsNonPositiveTTL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("JWT_SECRET", testSecret)
+			t.Setenv("JWT_SECRET", support.TestSecret)
 			t.Setenv("JWT_TTL", tt.ttl)
 
 			cfg, err := configs.NewJwtConfig()
@@ -225,7 +226,7 @@ func TestConfiguredTTLReachesToken(t *testing.T) {
 
 	t.Setenv("JWT_TTL", "900")
 
-	auth, cfg := authService(t, testSecret)
+	auth, cfg := support.AuthServiceWithConfig(t, support.TestSecret)
 
 	if cfg.TTL != wantTTL {
 		t.Fatalf("TTL = %v, want %v", cfg.TTL, wantTTL)
@@ -250,11 +251,11 @@ func TestConfiguredTTLReachesToken(t *testing.T) {
 func TestIssuerIsEnforcedAcrossConfigs(t *testing.T) {
 	t.Setenv("JWT_ISSUER", "issuer-a")
 
-	authA, _ := authService(t, testSecret)
+	authA, _ := support.AuthServiceWithConfig(t, support.TestSecret)
 
 	t.Setenv("JWT_ISSUER", "issuer-b")
 
-	authB, _ := authService(t, testSecret)
+	authB, _ := support.AuthServiceWithConfig(t, support.TestSecret)
 
 	tokenStr, err := authA.GenerateToken(1, "islacks")
 	if err != nil {
@@ -268,7 +269,7 @@ func TestIssuerIsEnforcedAcrossConfigs(t *testing.T) {
 
 // Guards the package-level fixture against drifting below the enforced minimum.
 func TestFixtureSecretMeetsMinimumLength(t *testing.T) {
-	for name, secret := range map[string]string{"testSecret": testSecret, "otherSecret": otherSecret} {
+	for name, secret := range map[string]string{"support.TestSecret": support.TestSecret, "support.OtherSecret": support.OtherSecret} {
 		if len(secret) < configs.MinSecretKeyLength {
 			t.Errorf("%s is %d bytes, want at least %d", name, len(secret), configs.MinSecretKeyLength)
 		}

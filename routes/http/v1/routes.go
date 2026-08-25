@@ -1,36 +1,32 @@
 package v1
 
 import (
-	controllers "web-app/app/http/controllers/v1"
 	"web-app/app/http/middlewares"
 	"web-app/app/services"
+	"web-app/routes/http/v1/auth"
+	"web-app/routes/http/v1/events"
 
 	"github.com/gin-gonic/gin"
 )
 
 /*
- * Register mounts the v1 API onto the given group.
+ * Register mounts every v1 domain onto the given group.
  *
  * Takes a *gin.RouterGroup rather than the engine so the caller owns the prefix
- * and this table stays mountable anywhere. Adding a sibling version means a new
- * package like this one, not an edit here.
+ * and this table stays mountable anywhere. Adding a domain is one Register call
+ * here plus a new package; no existing domain is touched.
  *
- * @param router The group this version hangs from, already prefixed.
- * @param auth   The service its controllers and middleware are built with.
+ * @param router      The group this version hangs from, already prefixed.
+ * @param authService The service injected down into each domain.
  */
-func Register(router *gin.RouterGroup, auth *services.AuthService) {
-	// authentication routes
-	authController := controllers.NewAuthController(auth)
-	router.POST("/login", authController.Login)
+func Register(router *gin.RouterGroup, authService *services.AuthService) {
+	// Public surface.
+	auth.Register(router, authService)
 
-	// Authenticated surface: the middleware hangs on the group, so every route
-	// added below inherits it and none can be registered unprotected by accident.
+	// Authenticated surface: the middleware hangs on the group, so every domain
+	// mounted below inherits it and none can be exposed unprotected by accident.
 	protected := router.Group("")
-	protected.Use(middlewares.Authenticate(auth))
+	protected.Use(middlewares.Authenticate(authService))
 
-	// events routes
-	eventController := controllers.NewEventController()
-	events := protected.Group("/events")
-	events.GET("", eventController.Index)
-	events.POST("", eventController.Create)
+	events.Register(protected)
 }
