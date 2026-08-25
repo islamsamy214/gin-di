@@ -6,9 +6,31 @@ import (
 	"web-app/database/seeders"
 )
 
+/*
+ * RegisteredMigration pairs a migration with the name stored in the migrations
+ * table.
+ */
+type RegisteredMigration struct {
+	Name      string
+	Migration interfaces.Migration
+}
+
+/*
+ * RegisteredSeeder pairs a seeder with the name used to select it.
+ */
+type RegisteredSeeder struct {
+	Name   string
+	Seeder interfaces.Seeder
+}
+
 type kernel struct {
-	Migrations map[string]interfaces.Migration
-	Seeders    map[string]interfaces.Seeder
+	// A slice, not a map: migrations run in this order, so a table may
+	// reference one declared above it. Map iteration is randomised in Go.
+	Migrations []RegisteredMigration
+
+	// Also a slice: a row referencing another must be seeded after it, and
+	// map iteration is randomised in Go.
+	Seeders []RegisteredSeeder
 }
 
 /*
@@ -16,19 +38,19 @@ type kernel struct {
  */
 func NewKernel() *kernel {
 	dbKernel := &kernel{
-		Migrations: map[string]interfaces.Migration{
-			// Add all the migrations here
-			// "table_name": &migrations.MigrationStruct{},
-			"migrations": &migrations.Migrate{},
-			"users":      &migrations.UserTable{},
-			"events":     &migrations.EventTable{},
+		Migrations: []RegisteredMigration{
+			// Add all the migrations here, in the order they must run.
+			// {Name: "table_name", Migration: &migrations.MigrationStruct{}},
+			// The migrations table itself is created by the Migrator.
+			{Name: "users", Migration: &migrations.UserTable{}},
+			{Name: "events", Migration: &migrations.EventTable{}},
 		},
 
-		Seeders: map[string]interfaces.Seeder{
-			// Add all the seeders here
-			// "table_name": &seeders.SeederStruct{},
-			"users":  &seeders.UserSeeder{},
-			"events": &seeders.EventSeeder{},
+		Seeders: []RegisteredSeeder{
+			// Add all the seeders here, in the order they must run.
+			// {Name: "table_name", Seeder: &seeders.SeederStruct{}},
+			{Name: "users", Seeder: &seeders.UserSeeder{}},
+			{Name: "events", Seeder: &seeders.EventSeeder{}},
 		},
 	}
 

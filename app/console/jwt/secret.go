@@ -1,4 +1,4 @@
-package console
+package jwt
 
 import (
 	"crypto/rand"
@@ -22,10 +22,10 @@ const (
 	secretRandomBytes = 32
 )
 
-type JwtSecretCommand struct{}
+type SecretCommand struct{}
 
-func NewJwtSecretCommand() *JwtSecretCommand {
-	return &JwtSecretCommand{}
+func NewSecretCommand() *SecretCommand {
+	return &SecretCommand{}
 }
 
 /*
@@ -34,7 +34,7 @@ func NewJwtSecretCommand() *JwtSecretCommand {
  * A fresh clone has no JWT_SECRET and the app refuses to boot without one, so
  * this is the first command a newcomer runs.
  */
-func (command *JwtSecretCommand) Handle(args []string) error {
+func (command *SecretCommand) Handle(args []string) error {
 	flags := flag.NewFlagSet("jwt:secret", flag.ContinueOnError)
 	show := flags.Bool("show", false, "print the secret instead of writing it to .env")
 	force := flags.Bool("force", false, "replace an existing JWT_SECRET, invalidating every issued token")
@@ -48,7 +48,7 @@ func (command *JwtSecretCommand) Handle(args []string) error {
 		return fmt.Errorf("parsing flags: %w", err)
 	}
 
-	secret, err := GenerateJwtSecret()
+	secret, err := GenerateSecret()
 	if err != nil {
 		return err
 	}
@@ -67,17 +67,17 @@ func (command *JwtSecretCommand) Handle(args []string) error {
 	return nil
 }
 
-func (command *JwtSecretCommand) Description() string {
+func (command *SecretCommand) Description() string {
 	return "Generates a signing secret and writes it to .env (--show, --force)"
 }
 
 /*
- * GenerateJwtSecret returns a fresh base64 signing secret.
+ * GenerateSecret returns a fresh base64 signing secret.
  *
  * Uses crypto/rand: a predictable secret lets anyone mint valid tokens. The
  * URL-safe alphabet avoids the "+/=" characters that complicate .env values.
  */
-func GenerateJwtSecret() (string, error) {
+func GenerateSecret() (string, error) {
 	buf := make([]byte, secretRandomBytes)
 	if _, err := rand.Read(buf); err != nil {
 		return "", fmt.Errorf("reading random bytes: %w", err)

@@ -1,46 +1,29 @@
 package seeders
 
 import (
-	"log"
+	"fmt"
 	"web-app/app/models"
+	"web-app/database/factories"
 )
+
+// seedEventCount is how many events the seeded account gets.
+const seedEventCount = 3
 
 type EventSeeder struct{}
 
-func (e *EventSeeder) Run() {
-	eventModel := models.NewEventModel()
+func (e *EventSeeder) Run() error {
+	// Events carry a foreign key, so the owner is looked up rather than
+	// assuming the seeded user landed on id 1.
+	owner := models.NewUserModel()
+	owner.Username = seedUsername
 
-	randomEvents := getRandomEvents()
-
-	for _, event := range randomEvents {
-		eventModel.Name = event.Name
-		eventModel.Date = event.Date
-		eventModel.UserId = event.UserId
-		err := eventModel.Create()
-		if err != nil {
-			log.Fatalf("error creating event: %v", err)
-		}
-	}
-}
-
-func getRandomEvents() []*models.Event {
-	events := []*models.Event{
-		{
-			Name:   "Birthday Party",
-			Date:   "2025-02-15",
-			UserId: 1,
-		},
-		{
-			Name:   "Test Event",
-			Date:   "2025-02-16",
-			UserId: 1,
-		},
-		{
-			Name:   "Another Event",
-			Date:   "2025-02-17",
-			UserId: 1,
-		},
+	if err := owner.FindByUsername(); err != nil {
+		return fmt.Errorf("finding user %s to own the seeded events: %w", seedUsername, err)
 	}
 
-	return events
+	if _, err := factories.EventFactory().Count(seedEventCount).State(factories.ForUser(owner)).Create(); err != nil {
+		return fmt.Errorf("creating events for %s: %w", seedUsername, err)
+	}
+
+	return nil
 }

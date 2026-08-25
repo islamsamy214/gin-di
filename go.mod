@@ -3,6 +3,7 @@ module web-app
 go 1.27
 
 require (
+	github.com/brianvoe/gofakeit/v7 v7.16.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/joho/godotenv v1.5.1

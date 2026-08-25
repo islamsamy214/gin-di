@@ -55,7 +55,13 @@ func newTestRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 func get(t *testing.T, router *gin.Engine, authorization string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	return getPath(t, router, "/protected", authorization)
+}
+
+func getPath(t *testing.T, router *gin.Engine, path, authorization string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
 	if authorization != "" {
 		req.Header.Set("Authorization", authorization)
 	}

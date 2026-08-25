@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"web-app/app/services/core"
 )
@@ -35,9 +36,10 @@ func (user *User) Create() error {
 		return err
 	}
 
-	err = result.Scan(&user.ID)
-	if err != nil {
-		log.Printf("error scanning user: %v", err)
+	// QueryRow defers the insert error to Scan, so returning nil here hid
+	// every constraint violation from the caller.
+	if err := result.Scan(&user.ID); err != nil {
+		return fmt.Errorf("scanning created user: %w", err)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"web-app/app/services/core"
 )
@@ -37,9 +38,10 @@ func (event *Event) Create() error {
 	}
 
 	// Get the ID and CreatedAt from the result
-	err = result.Scan(&event.ID, &event.CreatedAt)
-	if err != nil {
-		log.Printf("error scanning event: %v", err)
+	// QueryRow defers the insert error to Scan, so returning nil here hid
+	// every constraint violation from the caller.
+	if err := result.Scan(&event.ID, &event.CreatedAt); err != nil {
+		return fmt.Errorf("scanning created event: %w", err)
 	}
 
 	return nil

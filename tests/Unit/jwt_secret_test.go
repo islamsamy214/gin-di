@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"web-app/app/console"
+	"web-app/app/console/jwt"
 	"web-app/configs"
 )
 
@@ -62,10 +62,10 @@ func secretIn(t *testing.T, contents string) string {
 	return ""
 }
 
-func TestGenerateJwtSecretMeetsConfigMinimum(t *testing.T) {
-	secret, err := console.GenerateJwtSecret()
+func TestGenerateSecretMeetsConfigMinimum(t *testing.T) {
+	secret, err := jwt.GenerateSecret()
 	if err != nil {
-		t.Fatalf("GenerateJwtSecret() = %v, want nil", err)
+		t.Fatalf("GenerateSecret() = %v, want nil", err)
 	}
 
 	if len(secret) < configs.MinSecretKeyLength {
@@ -75,9 +75,9 @@ func TestGenerateJwtSecretMeetsConfigMinimum(t *testing.T) {
 
 // The generated secret must satisfy the very config that will consume it.
 func TestGeneratedSecretIsAcceptedByConfig(t *testing.T) {
-	secret, err := console.GenerateJwtSecret()
+	secret, err := jwt.GenerateSecret()
 	if err != nil {
-		t.Fatalf("GenerateJwtSecret() = %v, want nil", err)
+		t.Fatalf("GenerateSecret() = %v, want nil", err)
 	}
 
 	t.Setenv("JWT_SECRET", secret)
@@ -88,19 +88,19 @@ func TestGeneratedSecretIsAcceptedByConfig(t *testing.T) {
 }
 
 // A repeated secret would mean the randomness is broken.
-func TestGenerateJwtSecretIsUnique(t *testing.T) {
+func TestGenerateSecretIsUnique(t *testing.T) {
 	const runs = 100
 
 	seen := make(map[string]struct{}, runs)
 
 	for range runs {
-		secret, err := console.GenerateJwtSecret()
+		secret, err := jwt.GenerateSecret()
 		if err != nil {
-			t.Fatalf("GenerateJwtSecret() = %v, want nil", err)
+			t.Fatalf("GenerateSecret() = %v, want nil", err)
 		}
 
 		if _, duplicate := seen[secret]; duplicate {
-			t.Fatalf("GenerateJwtSecret() returned a duplicate after %d runs", len(seen))
+			t.Fatalf("GenerateSecret() returned a duplicate after %d runs", len(seen))
 		}
 
 		seen[secret] = struct{}{}
@@ -108,10 +108,10 @@ func TestGenerateJwtSecretIsUnique(t *testing.T) {
 }
 
 // URL-safe base64 keeps the value free of characters that complicate .env.
-func TestGenerateJwtSecretIsEnvSafe(t *testing.T) {
-	secret, err := console.GenerateJwtSecret()
+func TestGenerateSecretIsEnvSafe(t *testing.T) {
+	secret, err := jwt.GenerateSecret()
 	if err != nil {
-		t.Fatalf("GenerateJwtSecret() = %v, want nil", err)
+		t.Fatalf("GenerateSecret() = %v, want nil", err)
 	}
 
 	if strings.ContainsAny(secret, "+/=\"'$ \t\n#") {
@@ -119,10 +119,10 @@ func TestGenerateJwtSecretIsEnvSafe(t *testing.T) {
 	}
 }
 
-func TestJwtSecretCommandFillsEmptySecret(t *testing.T) {
+func TestSecretCommandFillsEmptySecret(t *testing.T) {
 	path := envDir(t, envFixture)
 
-	if err := console.NewJwtSecretCommand().Handle(nil); err != nil {
+	if err := jwt.NewSecretCommand().Handle(nil); err != nil {
 		t.Fatalf("Handle() = %v, want nil", err)
 	}
 
@@ -141,11 +141,11 @@ func TestJwtSecretCommandFillsEmptySecret(t *testing.T) {
 }
 
 // Replacing a live secret invalidates every issued token, so it needs --force.
-func TestJwtSecretCommandRefusesToOverwriteWithoutForce(t *testing.T) {
+func TestSecretCommandRefusesToOverwriteWithoutForce(t *testing.T) {
 	existing := strings.Replace(envFixture, "JWT_SECRET=", "JWT_SECRET=already-set-and-long-enough-to-be-real", 1)
 	path := envDir(t, existing)
 
-	if err := console.NewJwtSecretCommand().Handle(nil); err == nil {
+	if err := jwt.NewSecretCommand().Handle(nil); err == nil {
 		t.Error("Handle() = nil error, want a refusal")
 	}
 
@@ -154,12 +154,12 @@ func TestJwtSecretCommandRefusesToOverwriteWithoutForce(t *testing.T) {
 	}
 }
 
-func TestJwtSecretCommandForceReplacesExisting(t *testing.T) {
+func TestSecretCommandForceReplacesExisting(t *testing.T) {
 	const old = "already-set-and-long-enough-to-be-real"
 
 	path := envDir(t, strings.Replace(envFixture, "JWT_SECRET=", "JWT_SECRET="+old, 1))
 
-	if err := console.NewJwtSecretCommand().Handle([]string{"--force"}); err != nil {
+	if err := jwt.NewSecretCommand().Handle([]string{"--force"}); err != nil {
 		t.Fatalf("Handle() = %v, want nil", err)
 	}
 
@@ -175,10 +175,10 @@ func TestJwtSecretCommandForceReplacesExisting(t *testing.T) {
 }
 
 // A .env without the key at all should gain it rather than error.
-func TestJwtSecretCommandAppendsWhenKeyAbsent(t *testing.T) {
+func TestSecretCommandAppendsWhenKeyAbsent(t *testing.T) {
 	path := envDir(t, "APP_NAME=WebApplication\n")
 
-	if err := console.NewJwtSecretCommand().Handle(nil); err != nil {
+	if err := jwt.NewSecretCommand().Handle(nil); err != nil {
 		t.Fatalf("Handle() = %v, want nil", err)
 	}
 
@@ -194,10 +194,10 @@ func TestJwtSecretCommandAppendsWhenKeyAbsent(t *testing.T) {
 }
 
 // --show must not touch the file, so it is safe to pipe anywhere.
-func TestJwtSecretCommandShowLeavesEnvAlone(t *testing.T) {
+func TestSecretCommandShowLeavesEnvAlone(t *testing.T) {
 	path := envDir(t, envFixture)
 
-	if err := console.NewJwtSecretCommand().Handle([]string{"--show"}); err != nil {
+	if err := jwt.NewSecretCommand().Handle([]string{"--show"}); err != nil {
 		t.Fatalf("Handle() = %v, want nil", err)
 	}
 
@@ -206,22 +206,22 @@ func TestJwtSecretCommandShowLeavesEnvAlone(t *testing.T) {
 	}
 }
 
-func TestJwtSecretCommandFailsWithoutEnvFile(t *testing.T) {
+func TestSecretCommandFailsWithoutEnvFile(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	if err := console.NewJwtSecretCommand().Handle(nil); err == nil {
+	if err := jwt.NewSecretCommand().Handle(nil); err == nil {
 		t.Error("Handle() = nil error, want an error naming the missing .env")
 	}
 }
 
-func TestJwtSecretCommandPreservesFileMode(t *testing.T) {
+func TestSecretCommandPreservesFileMode(t *testing.T) {
 	path := envDir(t, envFixture)
 
 	if err := os.Chmod(path, 0o600); err != nil {
 		t.Fatalf("chmod: %v", err)
 	}
 
-	if err := console.NewJwtSecretCommand().Handle(nil); err != nil {
+	if err := jwt.NewSecretCommand().Handle(nil); err != nil {
 		t.Fatalf("Handle() = %v, want nil", err)
 	}
 
@@ -235,16 +235,16 @@ func TestJwtSecretCommandPreservesFileMode(t *testing.T) {
 	}
 }
 
-func TestJwtSecretCommandRejectsUnknownFlag(t *testing.T) {
+func TestSecretCommandRejectsUnknownFlag(t *testing.T) {
 	envDir(t, envFixture)
 
-	if err := console.NewJwtSecretCommand().Handle([]string{"--nope"}); err == nil {
+	if err := jwt.NewSecretCommand().Handle([]string{"--nope"}); err == nil {
 		t.Error("Handle() = nil error, want an error")
 	}
 }
 
-func TestJwtSecretCommandHasDescription(t *testing.T) {
-	if console.NewJwtSecretCommand().Description() == "" {
+func TestSecretCommandHasDescription(t *testing.T) {
+	if jwt.NewSecretCommand().Description() == "" {
 		t.Error("Description() = empty, want a description")
 	}
 }
