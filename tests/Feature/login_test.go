@@ -49,7 +49,7 @@ func TestLoginWithFactoryUser(t *testing.T) {
 		t.Fatalf("creating the factory user: %v", err)
 	}
 
-	res := postJSON(t, router, "/login", loginBody(username, factories.FactoryPassword))
+	res := postJSON(t, router, v1Path("/login"), loginBody(username, factories.FactoryPassword))
 
 	if res.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d (body: %s)", res.Code, http.StatusOK, res.Body)
@@ -80,7 +80,7 @@ func TestLoginTokenCarriesTheUsersID(t *testing.T) {
 		t.Fatal("factory user has id 0, so Create did not read back the inserted row")
 	}
 
-	res := postJSON(t, router, "/login", loginBody(username, factories.FactoryPassword))
+	res := postJSON(t, router, v1Path("/login"), loginBody(username, factories.FactoryPassword))
 	if res.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d (body: %s)", res.Code, http.StatusOK, res.Body)
 	}
@@ -120,7 +120,7 @@ func TestLoginRejectsBadCredentials(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := postJSON(t, router, "/login", tt.body)
+			res := postJSON(t, router, v1Path("/login"), tt.body)
 
 			if res.Code == http.StatusOK {
 				t.Errorf("status = %d, want a rejection (body: %s)", res.Code, res.Body)
@@ -153,7 +153,7 @@ func TestFactoryBatchUsersCanAllLogIn(t *testing.T) {
 
 		seen[user.Username] = struct{}{}
 
-		res := postJSON(t, router, "/login", loginBody(user.Username, factories.FactoryPassword))
+		res := postJSON(t, router, v1Path("/login"), loginBody(user.Username, factories.FactoryPassword))
 		if res.Code != http.StatusOK {
 			t.Errorf("login as %q: status = %d, want %d (body: %s)", user.Username, res.Code, http.StatusOK, res.Body)
 		}

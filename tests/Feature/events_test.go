@@ -44,7 +44,7 @@ func TestEventsReturnsFactoryEvents(t *testing.T) {
 		t.Fatalf("GenerateToken() = %v, want nil", err)
 	}
 
-	res := getPath(t, router, "/events", middlewares.BearerPrefix+token)
+	res := getPath(t, router, v1Path("/events"), middlewares.BearerPrefix+token)
 	if res.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d (body: %s)", res.Code, http.StatusOK, res.Body)
 	}
@@ -119,7 +119,7 @@ func TestEventsStillRequiresAuthWithRealRoutes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if res := getPath(t, router, "/events", tt.header); res.Code != http.StatusUnauthorized {
+			if res := getPath(t, router, v1Path("/events"), tt.header); res.Code != http.StatusUnauthorized {
 				t.Errorf("status = %d, want %d (body: %s)", res.Code, http.StatusUnauthorized, res.Body)
 			}
 		})

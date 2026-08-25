@@ -80,9 +80,15 @@ func appRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	httpApis.Regester(router, auth)
+	httpApis.Register(router, auth)
 
 	return router, auth
+}
+
+// v1Path prefixes a route with the v1 API mount point, so a prefix change stays
+// a one-line edit rather than a sweep through every Feature test.
+func v1Path(route string) string {
+	return httpApis.APIPrefix + "/v1" + route
 }
 
 // postJSON sends a JSON body to the given path.

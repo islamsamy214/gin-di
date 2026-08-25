@@ -1,4 +1,4 @@
-package controllers
+package v1
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ func NewEventController() *EventController {
 	return &EventController{}
 }
 
-func (e *EventController) Index(c *gin.Context) {
+func (controller *EventController) Index(c *gin.Context) {
 	eventsModel := models.NewEventModel()
 	events, err := eventsModel.Paginate(10, 1)
 
@@ -24,7 +24,7 @@ func (e *EventController) Index(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": events})
 }
 
-func (e *EventController) Create(c *gin.Context) {
+func (controller *EventController) Create(c *gin.Context) {
 	eventsModel := models.NewEventModel()
 	if err := c.ShouldBindJSON(eventsModel); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -34,11 +34,12 @@ func (provider *HttpServiceProvider) Boot() {
 	// Create a new gin router
 	router := gin.New()
 
+	// Global middleware must be registered before the routes: gin snapshots the
+	// handler chain at registration time, so anything added afterwards is
+	provider.GlobalMiddleware(router)
+
 	// Register the routes
 	provider.Register(router, authService)
-
-	// Add global middleware
-	provider.GlobalMiddleware(router)
 
 	// Start the server
 	serverErr := (&http.Server{
@@ -57,7 +58,7 @@ func (provider *HttpServiceProvider) Boot() {
 
 func (provider *HttpServiceProvider) Register(router *gin.Engine, auth *services.AuthService) {
 	// Register the routes
-	httpApis.Regester(router, auth)
+	httpApis.Register(router, auth)
 }
 
 func (provider *HttpServiceProvider) GlobalMiddleware(router *gin.Engine) {
