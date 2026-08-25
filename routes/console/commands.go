@@ -12,6 +12,7 @@ func Register() map[string]interfaces.Command {
 	// Register the command
 	return map[string]interfaces.Command{
 		"example": console.NewExampleCommand(),
+		"test":    console.NewTestCommand(),
 
 		// Database commands
 		"migrate":         migrations.NewMigrateCommand(),

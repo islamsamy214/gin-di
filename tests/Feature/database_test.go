@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"web-app/app/console"
 	"web-app/app/services"
 	"web-app/app/services/core"
 	"web-app/database"
@@ -17,7 +18,7 @@ import (
 // runDatabaseTestsEnv must be set for the database tests to run. These tests
 // DROP EVERY TABLE, so they stay opt-in rather than risking a developer's
 // working database on a stray `go test ./...`.
-const runDatabaseTestsEnv = "TEST_DB"
+const runDatabaseTestsEnv = console.DatabaseTestsEnv
 
 /*
  * freshDatabase gives the test an empty, fully migrated schema.
@@ -90,6 +91,26 @@ func postJSON(t *testing.T, router *gin.Engine, path, body string) *httptest.Res
 
 	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+
+	return res
+}
+
+func get(t *testing.T, router *gin.Engine, authorization string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	return getPath(t, router, "/protected", authorization)
+}
+
+func getPath(t *testing.T, router *gin.Engine, path, authorization string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if authorization != "" {
+		req.Header.Set("Authorization", authorization)
+	}
 
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)

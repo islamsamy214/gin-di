@@ -2,7 +2,6 @@ package feature
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"web-app/app/http/middlewares"
 	"web-app/app/services"
@@ -50,26 +49,6 @@ func newTestRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 	})
 
 	return router, auth
-}
-
-func get(t *testing.T, router *gin.Engine, authorization string) *httptest.ResponseRecorder {
-	t.Helper()
-
-	return getPath(t, router, "/protected", authorization)
-}
-
-func getPath(t *testing.T, router *gin.Engine, path, authorization string) *httptest.ResponseRecorder {
-	t.Helper()
-
-	req := httptest.NewRequest(http.MethodGet, path, nil)
-	if authorization != "" {
-		req.Header.Set("Authorization", authorization)
-	}
-
-	res := httptest.NewRecorder()
-	router.ServeHTTP(res, req)
-
-	return res
 }
 
 func TestProtectedRouteRejectsMalformedHeaders(t *testing.T) {
