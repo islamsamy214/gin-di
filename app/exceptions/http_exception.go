@@ -20,6 +20,7 @@ const (
 	MessageNotAllowed   = "Method not allowed"
 	MessageConflict     = "The request conflicts with existing data"
 	MessageValidation   = "The given data was invalid."
+	MessageTooMany      = "Too many requests"
 	MessageInternal     = "Something went wrong"
 )
 
@@ -90,6 +91,18 @@ func NewValidation(fields map[string][]string, cause error) *HTTPException {
 		Errors:  fields,
 		Err:     cause,
 	}
+}
+
+/*
+ * NewTooManyRequests reports an exhausted rate limit.
+ *
+ * Parameterless like NewUnauthorized: how long to wait is a response header, not
+ * part of the body, so the throttle middleware sets it directly rather than
+ * carrying it through the exception. Widening this type with an HTTP header
+ * would put transport detail in the error vocabulary.
+ */
+func NewTooManyRequests() *HTTPException {
+	return &HTTPException{Status: http.StatusTooManyRequests, Message: MessageTooMany}
 }
 
 /*

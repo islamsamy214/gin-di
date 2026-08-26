@@ -17,6 +17,7 @@ import (
 	"web-app/app/http/responses"
 	"web-app/app/services"
 	"web-app/app/services/core"
+	"web-app/app/services/throttle"
 	"web-app/configs"
 	httpApis "web-app/routes/http"
 
@@ -105,12 +106,35 @@ func (provider *HTTPServiceProvider) Boot() error {
 		return fmt.Errorf("boot: %w", err)
 	}
 
+	throttleConfig, err := configs.NewThrottleConfig()
+	if err != nil {
+		return fmt.Errorf("boot: throttle: %w", err)
+	}
+
+	/*
+	 * Logged because the throttle counts per client address, and that keying is
+	 * only trustworthy for the proxies listed here. A proxy in front that is
+	 * absent from the list makes every request appear to come from it, so the
+	 * whole application would share one allowance — an outage that is very hard
+	 * to read from the outside, and obvious in this line.
+	 */
+	logger.Info("rate limiting configured",
+		slog.String("store", throttleConfig.Store),
+		slog.Bool("global_enabled", throttleConfig.GlobalEnabled()),
+		slog.Int("global_limit", throttleConfig.Global.Requests),
+		slog.Duration("global_window", throttleConfig.Global.Per),
+		slog.Int("login_limit", throttleConfig.Login.Requests),
+		slog.Any("trusted_proxies", appConfig.TrustedProxies),
+	)
+
 	router, err := provider.Engine(container.New(container.Config{
-		App:    appConfig,
-		Auth:   services.NewAuthService(jwtConfig),
-		Users:  services.NewUserService(db),
-		DB:     db,
-		Logger: logger,
+		App:      appConfig,
+		Auth:     services.NewAuthService(jwtConfig),
+		Users:    services.NewUserService(db),
+		DB:       db,
+		Logger:   logger,
+		Throttle: throttleConfig,
+		Limiter:  throttle.NewMemoryStore(throttleConfig.MaxKeys),
 	}))
 	if err != nil {
 		return fmt.Errorf("boot: %w", err)
@@ -219,10 +243,24 @@ func (provider *HTTPServiceProvider) GlobalMiddleware(router *gin.Engine, c *con
 		// Before any handler reads a body.
 		middlewares.LimitBody(maxRequestBodyBytes),
 
-		// Last, so it is the innermost wrapper and sees errors reported by every
-		// route-level middleware and handler beneath it.
+		// Innermost of the error-agnostic layers, so it sees errors reported by
+		// every route-level middleware and handler beneath it.
 		middlewares.ExceptionHandler(c.Logger()),
 	)
+
+	/*
+	 * Below the exception handler, which is not a preference. The handler runs
+	 * ctx.Next() and inspects the result on the way out, so a middleware that
+	 * aborts above it is never seen: the 429 would never render and gin would
+	 * answer with an empty 200. Anything reporting through ctx.Error has to sit
+	 * beneath it, which is also why route-level middleware works today.
+	 *
+	 * Below CORS as well, so a preflight is answered before reaching here and a
+	 * browser client does not spend two tokens on every real request.
+	 */
+	if c.Throttle().GlobalEnabled() {
+		router.Use(middlewares.Throttle(c.Limiter(), c.Throttle().Global))
+	}
 
 	return nil
 }

@@ -7,10 +7,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 	"web-app/app/container"
 	"web-app/app/providers"
 	"web-app/app/services"
 	"web-app/app/services/core"
+	"web-app/app/services/throttle"
 	"web-app/configs"
 	httpApis "web-app/routes/http"
 
@@ -75,11 +77,13 @@ func AppRouterWith(t *testing.T, customize func(*container.Config)) (*gin.Engine
 	db := testConnection(t)
 
 	config := container.Config{
-		App:    configs.NewAppConfig(),
-		Auth:   AuthService(t, TestSecret),
-		Users:  services.NewUserService(db),
-		DB:     db,
-		Logger: logger,
+		App:      configs.NewAppConfig(),
+		Auth:     AuthService(t, TestSecret),
+		Users:    services.NewUserService(db),
+		DB:       db,
+		Logger:   logger,
+		Throttle: UnthrottledConfig(),
+		Limiter:  throttle.NewMemoryStore(0),
 	}
 
 	if customize != nil {
@@ -94,6 +98,31 @@ func AppRouterWith(t *testing.T, customize func(*container.Config)) (*gin.Engine
 	}
 
 	return router, resolved
+}
+
+/*
+ * UnthrottledConfig is a rate limit configuration no test can reach.
+ *
+ * Tests are not rate limited by default, deliberately. A suite that shares a
+ * router across a table of cases would otherwise start failing once it grew past
+ * the allowance, and the failure would look like a bug in whatever the test was
+ * actually about. A test that wants to exercise throttling sets its own limits
+ * through AppRouterWith.
+ *
+ * The store is still per-container, so even a real limit could not leak between
+ * tests.
+ *
+ * @return *configs.ThrottleConfig Limits large enough to be inert.
+ */
+func UnthrottledConfig() *configs.ThrottleConfig {
+	const inert = 1_000_000
+
+	return &configs.ThrottleConfig{
+		Store:   configs.MemoryStoreDriver,
+		Global:  throttle.Limit{Name: "global", Requests: inert, Per: time.Minute},
+		Login:   throttle.Limit{Name: "login", Requests: inert, Per: time.Minute},
+		MaxKeys: throttle.DefaultMaxKeys,
+	}
 }
 
 /*

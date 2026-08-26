@@ -10,6 +10,7 @@ import (
 	"web-app/app/container"
 	"web-app/app/http/middlewares"
 	"web-app/app/providers"
+	"web-app/app/services/throttle"
 	"web-app/configs"
 	"web-app/tests/support"
 
@@ -481,6 +482,11 @@ func engineWithOrigins(origins []string) error {
 	resolved := container.New(container.Config{
 		App:    &configs.AppConfig{URL: appURL, CORSOrigins: origins},
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+
+		// Engine consults these while assembling the middleware stack, so they
+		// are dependencies even for a test that only cares about origins.
+		Throttle: support.UnthrottledConfig(),
+		Limiter:  throttle.NewMemoryStore(0),
 	})
 
 	_, err := providers.NewHTTPServiceProvider().Engine(resolved)

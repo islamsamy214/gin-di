@@ -80,10 +80,23 @@ func CORS(origins []string) (gin.HandlerFunc, error) {
 		AllowMethods: corsAllowedMethods,
 		AllowHeaders: corsAllowedHeaders,
 
-		// Without this a browser can read the status and body but not the
-		// correlation id, which is the one value that ties a client-side error
-		// report back to a line in the log.
-		ExposeHeaders: []string{RequestIDHeader},
+		/*
+		 * A browser can read the status and body of a cross-origin response but
+		 * none of its other headers unless they are named here.
+		 *
+		 * The correlation id is what ties a client-side error report back to a
+		 * line in the log. The rate limit headers are what let a browser client
+		 * pace itself and honour a refusal — without them a throttled frontend
+		 * sees a 429 with no idea how long to wait, which is the situation the
+		 * headers exist to prevent.
+		 */
+		ExposeHeaders: []string{
+			RequestIDHeader,
+			RateLimitLimitHeader,
+			RateLimitRemainingHeader,
+			RateLimitResetHeader,
+			RetryAfterHeader,
+		},
 
 		AllowCredentials: corsAllowCredentials,
 		MaxAge:           corsMaxAge,

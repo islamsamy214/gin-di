@@ -18,6 +18,7 @@ import (
 	"log/slog"
 	"web-app/app/services"
 	"web-app/app/services/core"
+	"web-app/app/services/throttle"
 	"web-app/configs"
 )
 
@@ -25,30 +26,39 @@ import (
 // Container so callers construct it with field names, which keeps the call site
 // readable as the set of dependencies grows.
 type Config struct {
-	App    *configs.AppConfig
-	Auth   *services.AuthService
-	Users  *services.UserService
-	DB     *core.PostgresService
-	Logger *slog.Logger
+	App      *configs.AppConfig
+	Auth     *services.AuthService
+	Users    *services.UserService
+	DB       *core.PostgresService
+	Logger   *slog.Logger
+	Throttle *configs.ThrottleConfig
+
+	// Limiter counts requests. Held as the interface rather than the concrete
+	// store so a shared implementation can replace it without touching a route.
+	Limiter throttle.Store
 }
 
 // Container exposes the resolved application to route registration.
 type Container struct {
-	app    *configs.AppConfig
-	auth   *services.AuthService
-	users  *services.UserService
-	db     *core.PostgresService
-	logger *slog.Logger
+	app      *configs.AppConfig
+	auth     *services.AuthService
+	users    *services.UserService
+	db       *core.PostgresService
+	logger   *slog.Logger
+	throttle *configs.ThrottleConfig
+	limiter  throttle.Store
 }
 
 // New resolves a container from its dependencies.
 func New(config Config) *Container {
 	return &Container{
-		app:    config.App,
-		auth:   config.Auth,
-		users:  config.Users,
-		db:     config.DB,
-		logger: config.Logger,
+		app:      config.App,
+		auth:     config.Auth,
+		users:    config.Users,
+		db:       config.DB,
+		logger:   config.Logger,
+		throttle: config.Throttle,
+		limiter:  config.Limiter,
 	}
 }
 
@@ -66,3 +76,10 @@ func (container *Container) DB() *core.PostgresService { return container.db }
 
 // Logger returns the application logger.
 func (container *Container) Logger() *slog.Logger { return container.logger }
+
+// Throttle returns the rate limiting configuration, which carries the named
+// allowances routes apply.
+func (container *Container) Throttle() *configs.ThrottleConfig { return container.throttle }
+
+// Limiter returns the shared request counter.
+func (container *Container) Limiter() throttle.Store { return container.limiter }
