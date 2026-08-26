@@ -1,0 +1,64 @@
+# Keep the build context small and free of secrets.
+#
+# The Dockerfile does `COPY . .`, so without this file every one of these ends
+# up in an image layer — and a layer is readable by anyone who can pull the
+# image, whether or not a later instruction deletes the file.
+
+# Secrets. .env is gitignored but still sits in the working tree, so it would be
+# copied into the image despite never being committed.
+.env
+.env.*
+!.env.example
+
+# Version control history, which carries every file ever committed.
+.git
+.gitignore
+.gitattributes
+
+# Runtime artifacts belonging to the host, not the image.
+storage/logs/*
+!storage/logs/.gitkeep
+storage/app/*
+!storage/app/.gitkeep
+
+# Build output and module caches. The builder stage fetches its own.
+bin/
+build/
+go/
+*.exe
+*.so
+*.dylib
+*.a
+*.out
+*.test
+*.prof
+
+# Coverage and test reports.
+*.cover
+*.cov
+test-results/
+
+# Tests are not shipped in the runtime image.
+tests/
+
+# Documentation and editor state.
+*.md
+LICENSE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+
+# Compose files are for the host, and an override would silently change a build.
+docker-compose.yml
+docker-compose.override.yml
+Dockerfile
+.dockerignore
+
+# Local databases.
+*.sqlite

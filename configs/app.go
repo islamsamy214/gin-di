@@ -3,12 +3,14 @@ package configs
 import "web-app/app/helpers"
 
 type AppConfig struct {
-	Name  string
-	Env   string
-	Debug bool
-	Url   string
-	Host  string
-	Port  string
+	Name           string
+	Env            string
+	Debug          bool
+	URL            string
+	Host           string
+	Port           string
+	LogLevel       string
+	TrustedProxies []string
 }
 
 /**
@@ -45,7 +47,7 @@ func NewAppConfig() *AppConfig {
 		 * The base URL of the application.
 		 * Defaults to "http://localhost" if APP_URL is not set.
 		 */
-		Url: helpers.Env("APP_URL", "http://localhost").(string),
+		URL: helpers.Env("APP_URL", "http://localhost").(string),
 
 		/**
 		 * The host the application runs on.
@@ -58,5 +60,24 @@ func NewAppConfig() *AppConfig {
 		 * Defaults to 8000 if APP_PORT is not set.
 		 */
 		Port: helpers.Env("APP_PORT", "8000").(string),
+
+		/**
+		 * The minimum severity written to the log.
+		 * One of "debug", "info", "warn", "error". Defaults to "info".
+		 */
+		LogLevel: helpers.Env("APP_LOG_LEVEL", "info").(string),
+
+		/**
+		 * The proxies whose forwarding headers are believed when resolving the
+		 * client IP, as addresses or CIDRs.
+		 *
+		 * Empty by default, and empty means trust nothing. Gin trusts every
+		 * proxy unless told otherwise and its own documentation calls that
+		 * "NOT safe": with no list configured, any caller can dictate the
+		 * address that lands in the access log by sending X-Forwarded-For.
+		 * Set this to the reverse proxy actually in front of the app, and to
+		 * nothing at all when there isn't one.
+		 */
+		TrustedProxies: helpers.EnvSlice("APP_TRUSTED_PROXIES", []string{}),
 	}
 }

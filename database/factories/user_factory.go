@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 	"web-app/app/models"
-	"web-app/app/services"
+	"web-app/app/services/hash"
 
 	"github.com/brianvoe/gofakeit/v7"
 )
@@ -22,7 +22,7 @@ const FactoryPassword = "password"
  * the static $password cache in Laravel's UserFactory.
  */
 var factoryPasswordHash = sync.OnceValues(func() (string, error) {
-	return services.HashPassword(FactoryPassword)
+	return hash.Make(FactoryPassword)
 })
 
 /*

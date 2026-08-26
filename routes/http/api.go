@@ -2,7 +2,8 @@ package http
 
 import (
 	"net/http"
-	"web-app/app/services"
+	"web-app/app/container"
+	"web-app/app/http/responses"
 	v1 "web-app/routes/http/v1"
 
 	"github.com/gin-gonic/gin"
@@ -19,19 +20,17 @@ const APIPrefix = "/api"
  * version is touched.
  *
  * @param router The engine to register on.
- * @param auth   The service injected down into each version.
+ * @param c      The resolved application, passed down into each version.
  */
-func Register(router *gin.Engine, auth *services.AuthService) {
+func Register(router *gin.Engine, c *container.Container) {
 	// home route, deliberately outside the versioned API
 	router.GET("/", welcome)
 
 	api := router.Group(APIPrefix)
 
-	v1.Register(api.Group("/v1"), auth)
+	v1.Register(api.Group("/v1"), c)
 }
 
 func welcome(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Welcome to the home page",
-	})
+	responses.Success(ctx, http.StatusOK, "Welcome to the home page", nil)
 }

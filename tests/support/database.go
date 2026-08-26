@@ -20,7 +20,8 @@ const DatabaseTestsEnv = test.DatabaseTestsEnv
  * the opt-in is absent or no database answers, so the suite stays green on a
  * machine without Postgres.
  *
- * @return *core.PostgresService The live connection, closed on cleanup.
+ * @return *core.PostgresService The shared connection. Deliberately NOT closed on
+ *                               cleanup — see below.
  */
 func FreshDatabase(t *testing.T) *core.PostgresService {
 	t.Helper()
@@ -29,18 +30,20 @@ func FreshDatabase(t *testing.T) *core.PostgresService {
 		t.Skipf("set %s=1 to run database tests (they drop every table)", DatabaseTestsEnv)
 	}
 
-	db, err := core.NewPostgresService()
+	/*
+	 * The shared, memoized pool — the same one the models resolve, so a test
+	 * exercises the connection the application actually uses.
+	 *
+	 * There is deliberately no t.Cleanup closing it. The pool is process-wide, so
+	 * closing it after the first test would leave every later test in the same
+	 * binary holding a closed handle. It is released when the process exits.
+	 */
+	db, err := core.Connection()
 	if err != nil {
-		t.Skipf("cannot open a database connection: %v", err)
+		t.Skipf("no database reachable: %v", err)
 	}
 
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Errorf("closing the database: %v", err)
-		}
-	})
-
-	// sql.Open is lazy, so this is the first attempt to actually reach Postgres.
+	// Connection pings at open time, so reaching here means Postgres answered.
 	rows, err := db.Read(`SELECT 1`)
 	if err != nil {
 		t.Skipf("no database reachable: %v", err)

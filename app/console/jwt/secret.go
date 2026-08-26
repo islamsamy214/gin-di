@@ -144,10 +144,16 @@ func replaceFile(path, contents string, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
-	defer os.Remove(tmp.Name())
+	// Best-effort cleanup for the failure paths below. On success the rename has
+	// already moved the file, so this finds nothing and that is the expected
+	// outcome — hence the explicit discard.
+	defer func() { _ = os.Remove(tmp.Name()) }()
 
 	if _, err := tmp.WriteString(contents); err != nil {
-		tmp.Close()
+		// The write error is what the caller needs; a close error on a temp file
+		// that is about to be removed adds nothing.
+		_ = tmp.Close()
+
 		return fmt.Errorf("writing temp file: %w", err)
 	}
 

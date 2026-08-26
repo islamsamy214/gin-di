@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"web-app/database/factories"
 	"web-app/tests/support"
@@ -19,23 +20,31 @@ func loginBody(username, password string) string {
 	return string(body)
 }
 
-// tokenFrom pulls the token out of a successful login response.
+/*
+ * tokenFrom pulls the token out of a successful login response.
+ *
+ * The token moved under the envelope's data key when the response adopted the
+ * shared {status, message, data, errors} shape — it used to sit at the top level
+ * beside a `user` object that carried the stored password hash.
+ */
 func tokenFrom(t *testing.T, body []byte) string {
 	t.Helper()
 
 	var parsed struct {
-		Token string `json:"token"`
+		Data struct {
+			Token string `json:"token"`
+		} `json:"data"`
 	}
 
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		t.Fatalf("decoding login response %s: %v", body, err)
 	}
 
-	if parsed.Token == "" {
+	if parsed.Data.Token == "" {
 		t.Fatalf("login response carried no token: %s", body)
 	}
 
-	return parsed.Token
+	return parsed.Data.Token
 }
 
 func TestLoginWithFactoryUser(t *testing.T) {
@@ -122,10 +131,55 @@ func TestLoginRejectsBadCredentials(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			res := support.PostJSON(t, router, support.V1Path("/login"), tt.body)
 
-			if res.Code == http.StatusOK {
-				t.Errorf("status = %d, want a rejection (body: %s)", res.Code, res.Body)
+			// Pinned to 401 rather than merely "not 200". Bad credentials used to
+			// answer 400, and both cases must answer identically: a different
+			// status for "unknown user" than for "wrong password" is a
+			// username-enumeration oracle.
+			if res.Code != http.StatusUnauthorized {
+				t.Errorf("status = %d, want %d (body: %s)", res.Code, http.StatusUnauthorized, res.Body)
 			}
 		})
+	}
+}
+
+/*
+ * Regression: the login response used to serialize the whole user model, whose
+ * Password field carried the stored argon2id hash — so every successful login
+ * handed the caller the hash for that account.
+ *
+ * Asserted against the real stored value rather than the string "argon2" or a
+ * literal, so the test cannot rot if the hash encoding changes.
+ */
+func TestLoginResponseNeverCarriesThePasswordHash(t *testing.T) {
+	support.FreshDatabase(t)
+
+	router, _ := support.AppRouter(t)
+
+	const username = "erin"
+
+	user, err := factories.UserFactory().State(factories.WithUsername(username)).CreateOne()
+	if err != nil {
+		t.Fatalf("creating the factory user: %v", err)
+	}
+
+	if user.Password == "" {
+		t.Fatal("factory user has no stored hash, so this test cannot detect the leak")
+	}
+
+	res := support.PostJSON(t, router, support.V1Path("/login"), loginBody(username, factories.FactoryPassword))
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d (body: %s)", res.Code, http.StatusOK, res.Body)
+	}
+
+	body := res.Body.String()
+
+	if strings.Contains(body, user.Password) {
+		t.Errorf("login response leaked the stored password hash: %s", body)
+	}
+
+	if strings.Contains(body, `"password"`) {
+		t.Errorf("login response carries a password field: %s", body)
 	}
 }
 

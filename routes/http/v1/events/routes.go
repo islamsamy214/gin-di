@@ -1,6 +1,7 @@
 package events
 
 import (
+	"web-app/app/container"
 	controllers "web-app/app/http/controllers/v1/events"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +14,10 @@ import (
  * the domain never has to remember to apply the middleware itself.
  *
  * @param router The protected group these routes hang from.
+ * @param c      The resolved application the controller is built from.
  */
-func Register(router *gin.RouterGroup) {
-	controller := controllers.NewController()
+func Register(router *gin.RouterGroup, c *container.Container) {
+	controller := controllers.NewController(c.DB())
 
 	events := router.Group("/events")
 	events.GET("", controller.Index)

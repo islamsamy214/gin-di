@@ -1,17 +1,11 @@
 package services
 
 import (
-	"crypto/rand"
-	"crypto/subtle"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"time"
-	"web-app/app/models"
 	"web-app/configs"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/argon2"
 )
 
 // AuthService issues and verifies access tokens. Its JWT settings are injected
@@ -74,73 +68,8 @@ func (s *AuthService) ParseToken(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
-// AttemptLogin verifies the supplied credentials and returns the matching user
-func (s *AuthService) AttemptLogin(user *models.User, password string) (*models.User, error) {
-	// Get the user from the database
-	user, err := GetUserByUsername(user)
-	if err != nil {
-		return nil, errors.New("invalid credentials")
-	}
-
-	// Verify the password
-	match, err := VerifyPassword(user.Password, password)
-	if err != nil {
-		return nil, err
-	}
-
-	if !match {
-		return nil, errors.New("invalid credentials")
-	}
-
-	return user, nil
-}
-
-// HashPassword hashes the provided password using the Argon2id key derivation function
-func HashPassword(password string) (string, error) {
-	// Generate a salt with a length of 16 bytes
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
-		return "", err
-	}
-
-	// Hash the password using the Argon2id key derivation function
-	hash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
-	fullHash := append(salt, hash...)
-
-	// Encode to a base64 string
-	return base64.StdEncoding.EncodeToString(fullHash), nil
-}
-
-// decodeHashedPassword decodes the hashed password and returns the password
-func VerifyPassword(hashedPassword, password string) (bool, error) {
-	// Decode the base64 string to get the full hash (salt + hashed password)
-	data, err := base64.StdEncoding.DecodeString(hashedPassword)
-	if err != nil {
-		return false, err
-	}
-
-	// Extract the salt (first 16 bytes)
-	if len(data) < 16 {
-		return false, errors.New("invalid hash format")
-	}
-	salt := data[:16]
-
-	// Extract the hash (remaining bytes)
-	storedHash := data[16:]
-
-	// Hash the provided password using the same salt
-	newHash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
-
-	// Compare the new hash with the stored hash
-	return subtle.ConstantTimeCompare(newHash, storedHash) == 1, nil
-}
-
-func GetUserByUsername(u *models.User) (*models.User, error) {
-	// Find the user by username
-	err := u.FindByUsername()
-	if err != nil {
-		return nil, err
-	}
-
-	return u, nil
-}
+// Password hashing moved to app/services/hash (the Hash facade) and credential
+// verification to UserService. AttemptLogin took a *models.User and then
+// rebound that same parameter from the database, and was called as
+// AttemptLogin(user, user.Password) — a signature that could not be read
+// correctly. UserService.Authenticate(username, password) replaces it.

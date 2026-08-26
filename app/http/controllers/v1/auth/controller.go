@@ -2,44 +2,66 @@ package auth
 
 import (
 	"net/http"
-	"web-app/app/models"
+	"web-app/app/exceptions"
+	requests "web-app/app/http/requests/auth"
+	"web-app/app/http/resources"
+	"web-app/app/http/responses"
 	"web-app/app/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Controller struct {
-	auth *services.AuthService
+	auth  *services.AuthService
+	users *services.UserService
 }
 
-func NewController(auth *services.AuthService) *Controller {
-	return &Controller{auth: auth}
+func NewController(auth *services.AuthService, users *services.UserService) *Controller {
+	return &Controller{auth: auth, users: users}
 }
 
+/*
+ * Login exchanges credentials for an access token.
+ *
+ * @route POST /api/v1/login
+ */
 func (controller *Controller) Login(ctx *gin.Context) {
-	user := models.NewUserModel()
-	err := ctx.ShouldBindJSON(&user)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var request requests.LoginRequest
+
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		_ = ctx.Error(exceptions.FromBindError(err))
+
 		return
 	}
 
-	loginUser, err := controller.auth.AttemptLogin(user, user.Password)
+	user, err := controller.users.Authenticate(request.Username, request.Password)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		/*
+		 * One response for "no such user" and "wrong password", and a 401 rather
+		 * than the 400 this used to return. Distinguishing the two cases turns
+		 * the endpoint into a username-enumeration oracle, and the cause is
+		 * carried on the exception so the log still records which it was.
+		 */
+		unauthorized := exceptions.NewUnauthorized()
+		unauthorized.Message = "Invalid credentials"
+		unauthorized.Err = err
+
+		_ = ctx.Error(unauthorized)
+
 		return
 	}
 
-	token, err := controller.auth.GenerateToken(loginUser.ID, loginUser.Username)
-
+	token, err := controller.auth.GenerateToken(user.ID, user.Username)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = ctx.Error(exceptions.NewInternal(err))
+
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Success",
-		"user":    loginUser,
-		"token":   token,
-	})
+	/*
+	 * The user goes out as a resource, never as the model. models.User carries
+	 * the stored argon2id hash, and returning the model here served that hash to
+	 * the client on every successful login.
+	 */
+	responses.Success(ctx, http.StatusOK, "Logged in", resources.NewSessionResource(token, user))
 }

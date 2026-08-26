@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,8 +13,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// newTestRouter mounts a protected route behind the real middleware, so these
-// tests exercise the same gin.Recovery stack production runs.
+/*
+ * newTestRouter mounts a protected route behind the real middleware.
+ *
+ * ExceptionHandler is not optional here. Authenticate no longer writes its own
+ * rejection body — it reports the failure with ctx.Error and aborts, so that the
+ * status, the envelope and the logging all happen in one place. Without the
+ * handler registered, every rejection below would abort with no body at all.
+ */
 func newTestRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 	t.Helper()
 
@@ -20,8 +28,10 @@ func newTestRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 
 	gin.SetMode(gin.TestMode)
 
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
 	router := gin.New()
-	router.Use(gin.Recovery())
+	router.Use(gin.Recovery(), middlewares.ExceptionHandler(logger))
 	router.GET("/protected", middlewares.Authenticate(auth), func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
 			"userId":   ctx.GetInt64("userId"),
@@ -73,14 +83,23 @@ func TestProtectedRouteRejectsForeignlySignedToken(t *testing.T) {
 	}
 }
 
-// A rejected request must not leak parser internals back to the caller.
+/*
+ * A rejected request must not leak parser internals back to the caller.
+ *
+ * Asserted byte for byte, including the null data and errors keys: the envelope
+ * always carries all four, so a client can read response.errors without first
+ * checking that the key exists. The cause — expired, forged, malformed — is
+ * recorded on the exception for the log and appears nowhere here.
+ */
 func TestProtectedRouteDoesNotLeakParseErrors(t *testing.T) {
 	router, _ := newTestRouter(t)
 
 	res := get(t, router, middlewares.BearerPrefix+"not-a-jwt")
 
-	if body := res.Body.String(); body != `{"message":"Unauthorized"}` {
-		t.Errorf("body = %s, want a fixed Unauthorized message", body)
+	const want = `{"status":"error","message":"Unauthorized","data":null,"errors":null}`
+
+	if body := res.Body.String(); body != want {
+		t.Errorf("body = %s, want %s", body, want)
 	}
 }
 

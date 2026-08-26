@@ -4,8 +4,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # The Dockerfile's last stage is `production`, which ships the binary
+      # alone. This workflow bind-mounts the source and runs the test command
+      # inside the container, so it needs the stage that carries the toolchain.
+      target: development
       args:
         WWWGROUP: 1000
+        WWWUSER: 1000
     image: "web-app/go"
     # deploy:
     #     resources:

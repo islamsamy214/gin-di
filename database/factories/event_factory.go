@@ -13,7 +13,7 @@ const dateLayout = "2006-01-02"
 /*
  * EventFactory builds events.
  *
- * UserId is deliberately left unset: events carry a foreign key to users, so
+ * UserID is deliberately left unset: events carry a foreign key to users, so
  * the caller states an owner with ForUser rather than the factory inventing
  * one. A bare Create therefore fails loudly instead of guessing an id.
  *
@@ -38,6 +38,6 @@ func EventFactory() *Factory[*models.Event] {
  */
 func ForUser(user *models.User) func(*models.Event) {
 	return func(event *models.Event) {
-		event.UserId = user.ID
+		event.UserID = user.ID
 	}
 }

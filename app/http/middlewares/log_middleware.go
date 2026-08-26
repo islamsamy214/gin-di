@@ -1,64 +1,42 @@
 package middlewares
 
 import (
-	"io"
-	"log"
-	"os"
-	"path/filepath"
+	"log/slog"
 	"time"
-	"web-app/configs"
+
+	"github.com/gin-gonic/gin"
 )
 
-func NewLogIOWriterMiddleware() io.Writer {
-	logDir := "./storage/logs/"
-	os.MkdirAll(logDir, os.ModePerm) // Ensure log directory exists
+/*
+ * Logger records one structured line per request.
+ *
+ * This replaces gin.LoggerWithWriter and the io.Writer factory that used to
+ * stand in for a middleware here. That factory reconfigured the global log
+ * package as a side effect of being constructed, fixed its filename at boot so
+ * a long-running process never rolled over to a new day, never closed the file,
+ * and swept old logs from a detached goroutine whose failures nothing could
+ * observe. Log rotation now belongs to core.NewLogger; this file logs requests.
+ *
+ * @param logger The application logger.
+ */
+func Logger(logger *slog.Logger) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		start := time.Now()
 
-	// Generate log file name based on the current date
-	logFileName := filepath.Join(logDir, configs.NewAppConfig().Name+"-"+time.Now().Format("2006-01-02")+".log")
+		ctx.Next()
 
-	// Open the log file in append mode, create if not exists
-	logFile, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
-	}
+		logger.LogAttrs(ctx.Request.Context(), slog.LevelInfo, "request",
+			slog.String("request_id", RequestIDFrom(ctx)),
+			slog.String("method", ctx.Request.Method),
+			slog.String("path", ctx.Request.URL.Path),
+			slog.Int("status", ctx.Writer.Status()),
+			slog.Duration("latency", time.Since(start)),
+			slog.Int("bytes", ctx.Writer.Size()),
 
-	// MultiWriter: log to both file and console
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(multiWriter)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
-	// Start a separate goroutine to clean up old logs
-	go cleanupOldLogs(logDir, 30)
-
-	return multiWriter
-}
-
-// cleanupOldLogs removes log files older than the specified retention days
-func cleanupOldLogs(logDir string, retentionDays int) {
-	files, err := os.ReadDir(logDir)
-	if err != nil {
-		log.Printf("Error reading log directory: %v", err)
-		return
-	}
-
-	cutoff := time.Now().AddDate(0, 0, -retentionDays)
-	for _, file := range files {
-		filePath := filepath.Join(logDir, file.Name())
-
-		// Get file info
-		info, err := os.Stat(filePath)
-		if err != nil {
-			log.Printf("Error getting file info for %s: %v", filePath, err)
-			continue
-		}
-
-		// Delete old log files
-		if info.ModTime().Before(cutoff) {
-			if err := os.Remove(filePath); err != nil {
-				log.Printf("Error deleting old log file %s: %v", filePath, err)
-			} else {
-				log.Printf("Deleted old log file: %s", filePath)
-			}
-		}
+			// Trustworthy only because the engine sets trusted proxies. With
+			// gin's default of trusting every proxy, this field is whatever the
+			// caller put in X-Forwarded-For.
+			slog.String("ip", ctx.ClientIP()),
+		)
 	}
 }

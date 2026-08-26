@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 	"web-app/app/models"
-	"web-app/app/services"
+	"web-app/app/services/hash"
 	"web-app/database/factories"
 )
 
@@ -118,13 +118,13 @@ func TestFactoryUserPasswordVerifies(t *testing.T) {
 		t.Fatalf("MakeOne() = %v, want nil", err)
 	}
 
-	matches, err := services.VerifyPassword(user.Password, factories.FactoryPassword)
+	matches, err := hash.Check(user.Password, factories.FactoryPassword)
 	if err != nil {
-		t.Fatalf("VerifyPassword() = %v, want nil", err)
+		t.Fatalf("Check() = %v, want nil", err)
 	}
 
 	if !matches {
-		t.Error("VerifyPassword() = false, want the factory password to verify")
+		t.Error("Check() = false, want the factory password to verify")
 	}
 }
 
@@ -159,8 +159,8 @@ func TestEventFactoryLeavesOwnerUnset(t *testing.T) {
 		t.Fatalf("MakeOne() = %v, want nil", err)
 	}
 
-	if event.UserId != 0 {
-		t.Errorf("UserId = %d, want 0 so the caller must state an owner", event.UserId)
+	if event.UserID != 0 {
+		t.Errorf("UserID = %d, want 0 so the caller must state an owner", event.UserID)
 	}
 
 	if event.Name == "" {
@@ -181,8 +181,8 @@ func TestForUserStatesTheOwner(t *testing.T) {
 		t.Fatalf("MakeOne() = %v, want nil", err)
 	}
 
-	if event.UserId != owner.ID {
-		t.Errorf("UserId = %d, want %d", event.UserId, owner.ID)
+	if event.UserID != owner.ID {
+		t.Errorf("UserID = %d, want %d", event.UserID, owner.ID)
 	}
 }
 

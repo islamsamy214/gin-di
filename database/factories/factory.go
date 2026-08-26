@@ -27,7 +27,7 @@ type Definition[T Persistable] func(sequence int) (T, error)
  * The API is fluent and chainable in the Eloquent style:
  *
  *	factories.UserFactory().Count(3).Create()
- *	factories.EventFactory().State(func(e *models.Event) { e.UserId = id }).CreateOne()
+ *	factories.EventFactory().State(func(e *models.Event) { e.UserID = id }).CreateOne()
  */
 type Factory[T Persistable] struct {
 	definition Definition[T]

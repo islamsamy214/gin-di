@@ -1,0 +1,149 @@
+# golangci-lint configuration, v2 schema.
+#
+# Run `golangci-lint migrate` if you are still on a v1 config elsewhere.
+#
+# The selections below are not decorative. Every one of these caught something
+# real in this codebase:
+#   errcheck      — `db, _ := core.NewPostgresService()` (a discarded error that
+#                   produced a nil handle) and an unchecked os.MkdirAll
+#   gosec         — a hardcoded `sslmode=disable` in the DSN
+#   noctx         — every database call made without a context, which is the
+#                   remaining cross-cutting work
+#   rowserrcheck  — a paginator that ignored rows.Err() and so read a partial
+#                   result as a complete one
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - errcheck        # unchecked errors
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - errorlint       # %v where %w belongs; == where errors.Is belongs
+    - bodyclose       # unclosed HTTP response bodies
+    - rowserrcheck    # missing rows.Err() after iterating
+    - sqlclosecheck   # unclosed sql.Rows / sql.Stmt
+    - noctx           # HTTP and SQL calls that should carry a context
+    - contextcheck    # a function that drops an inherited context
+
+    # Security
+    - gosec
+
+    # Style and clarity
+    - revive
+    - misspell
+
+  settings:
+    errcheck:
+      exclude-functions:
+        # A deferred Close on a handle being torn down has nothing useful to do
+        # with the error, and wrapping each one in a closure to discard it is
+        # noisier than the check is worth.
+        - (*database/sql.Rows).Close
+        - (io.Closer).Close
+        - (*web-app/app/services/core.PostgresService).Close
+
+        # Writes to stdout/stderr for CLI output. If the terminal has gone away
+        # there is nowhere left to report that it has.
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - fmt.Fprint
+
+    # govet's `shadow` check is deliberately NOT enabled. It flags the standard
+    # `if err := f(); err != nil` idiom every time it appears inside a function
+    # that already has an `err`, which is most of them — so it reports dozens of
+    # correct constructions and would train the reader to ignore the linter. The
+    # shadowing that actually caused a bug here was a function rebinding its own
+    # parameter, which is an assignment rather than a shadow and which this check
+    # does not catch anyway.
+    govet:
+      enable-all: false
+
+    staticcheck:
+      checks:
+        - all
+
+        # QF1001 rewrites `!(a < b && b < c)` into `a >= b || b >= c`. The
+        # negated form states the intent — "not properly ordered" — and the
+        # De Morgan form has to be decoded to read the same way. A style
+        # preference, not a correctness check.
+        - -QF1001
+
+        # ST1000/ST1020/ST1021/ST1022 require doc comments to open with the
+        # identifier they document ("SetUser ..."). This codebase documents in
+        # PHPDoc-style blocks with @param/@return throughout, which is a
+        # deliberate house convention carried over from the Laravel side — the
+        # same reason revive's `exported` rule is disabled above. Enforcing both
+        # forms at once is not possible, and the existing one is consistent.
+        - -ST1000
+        - -ST1020
+        - -ST1021
+        - -ST1022
+
+    gosec:
+      excludes:
+        # Covered by review rather than the linter: this project's file modes are
+        # set explicitly and deliberately (0o755 for the log directory, 0o644 for
+        # log files), and G306's fixed threshold flags the correct values.
+        - G306
+
+    revive:
+      rules:
+        - name: exported
+          # Doc comments are required, but this codebase documents in block form
+          # with @param/@return rather than the "Name ..." prefix revive expects.
+          disabled: true
+        - name: var-naming
+        - name: indent-error-flow
+        - name: errorf
+        - name: context-as-argument
+        - name: unreachable-code
+
+  exclusions:
+    rules:
+      # Tests deliberately construct malformed input, ignore errors on values
+      # they are about to assert on, and hardcode credentials.
+      - path: ^tests/
+        linters:
+          - errcheck
+          - gosec
+          - contextcheck
+          - noctx
+
+      # Migrations and seeders run as one-shot console commands, not in a request,
+      # so there is no inherited context for them to propagate.
+      - path: ^database/
+        linters:
+          - noctx
+          - contextcheck
+
+      # Console commands take file paths and build subprocess arguments from
+      # command-line input, and run to completion with no request to inherit a
+      # context from. G304 (file inclusion via variable), G204 (subprocess with
+      # variable) and noctx all describe the shape of a CLI rather than a flaw.
+      - path: ^app/console/
+        linters:
+          - gosec
+          - noctx
+
+      # The query wrapper is the one place that must call the non-context
+      # database/sql methods, because the methods it exposes have no context to
+      # pass yet. Threading context.Context through the data path is scheduled
+      # work — it touches roughly twenty files — and until then this exclusion
+      # keeps noctx useful everywhere else instead of failing every run. Remove it
+      # with that change; it is the checklist for it.
+      - path: ^app/services/core/pgsql_service\.go$
+        linters:
+          - noctx
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
