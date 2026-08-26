@@ -14,7 +14,6 @@ go/
 # Go-specific
 *.test
 *.prof
-*.sum
 
 # Vendor directory (if not using Go Modules to manage dependencies)
 vendor/

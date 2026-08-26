@@ -11,6 +11,7 @@ type AppConfig struct {
 	Port           string
 	LogLevel       string
 	TrustedProxies []string
+	CORSOrigins    []string
 }
 
 /**
@@ -44,10 +45,18 @@ func NewAppConfig() *AppConfig {
 		Debug: helpers.Env("APP_DEBUG", false).(bool),
 
 		/**
-		 * The base URL of the application.
-		 * Defaults to "http://localhost" if APP_URL is not set.
+		 * The public base URL this API is reached at, scheme and host included.
+		 *
+		 * Deliberately has no default. Its only consumer is the CORS allowlist,
+		 * where it supplies this application's own origin, and a guessed value
+		 * is wrong in every deployment that matters: a default without a port
+		 * does not match a browser on http://localhost:8000, because a port is
+		 * part of an origin, and no default can know the public host behind a
+		 * proxy. Wrong here means same-origin writes are refused with a bare 403
+		 * that mentions neither CORS nor the origin, so an empty value is left to
+		 * fail loudly at boot instead — and only when CORS is actually enabled.
 		 */
-		URL: helpers.Env("APP_URL", "http://localhost").(string),
+		URL: helpers.Env("APP_URL", "").(string),
 
 		/**
 		 * The host the application runs on.
@@ -76,9 +85,32 @@ func NewAppConfig() *AppConfig {
 		 * "NOT safe": with no list configured, any caller can dictate the
 		 * address that lands in the access log by sending X-Forwarded-For.
 		 * Set this to the reverse proxy actually in front of the app, and to
-		 * nothing at all when there isn't one.
-		 * 172.16.0.0/12 — or better, the container's /32, nginx/Traefik in the same compose network
+		 * nothing at all when there isn't one. Entries are addresses or CIDRs,
+		 * never URLs: "10.0.0.7", "172.16.0.0/12". A URL here is a boot error.
 		 */
 		TrustedProxies: helpers.EnvSlice("APP_TRUSTED_PROXIES", []string{}),
+
+		/**
+		 * The browser origins allowed to call this API cross-origin.
+		 *
+		 * These are the origins of the pages calling this API, not where the API
+		 * itself lives — a browser only sends an Origin header when the two
+		 * differ, so listing this API's public address here buys nothing for
+		 * cross-origin traffic.
+		 *
+		 * URL is nevertheless merged in automatically whenever this list is
+		 * non-empty, for a narrower reason: a browser also sends Origin on
+		 * same-origin requests that are not GET or HEAD, so a frontend served
+		 * from this API's own host would have its POSTs refused with a 403
+		 * unless that origin is allowed. See middlewares.EffectiveOrigins.
+		 *
+		 * Empty by default, and empty means the CORS middleware is not
+		 * installed at all: a server-to-server or CLI client never sends
+		 * Origin, so a pure API deployment should emit no CORS headers rather
+		 * than headers that permit nothing. Entries are scheme://host[:port]
+		 * with no trailing slash and no path — exactly what a browser sends —
+		 * or the single wildcard "*".
+		 */
+		CORSOrigins: helpers.EnvSlice("APP_CORS_ORIGINS", []string{}),
 	}
 }

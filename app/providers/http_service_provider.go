@@ -153,7 +153,10 @@ func (provider *HTTPServiceProvider) Engine(c *container.Container) (*gin.Engine
 	// Global middleware must be registered before the routes: gin snapshots the
 	// handler chain when each route is registered, so anything added afterwards
 	// is absent from routes already in the tree.
-	provider.GlobalMiddleware(router, c)
+	if err := provider.GlobalMiddleware(router, c); err != nil {
+		return nil, err
+	}
+
 	provider.Fallbacks(router)
 
 	httpApis.Register(router, c)
@@ -168,8 +171,9 @@ func (provider *HTTPServiceProvider) Engine(c *container.Container) (*gin.Engine
  *
  * @param router The engine to register on.
  * @param c      The resolved application.
+ * @return error If the configured CORS origins are not usable.
  */
-func (provider *HTTPServiceProvider) GlobalMiddleware(router *gin.Engine, c *container.Container) {
+func (provider *HTTPServiceProvider) GlobalMiddleware(router *gin.Engine, c *container.Container) error {
 	router.Use(
 		// First, so every log line and error below can correlate against it.
 		middlewares.RequestID(),
@@ -179,7 +183,39 @@ func (provider *HTTPServiceProvider) GlobalMiddleware(router *gin.Engine, c *con
 		middlewares.Logger(c.Logger()),
 
 		middlewares.Recovery(c.Logger()),
+	)
 
+	/*
+	 * Installed only when origins are configured, so a deployment with no
+	 * browser client emits no CORS headers at all.
+	 *
+	 * Inside Logger and Recovery, so a preflight is logged and correlated like
+	 * any other request and a panic still answers with headers set. Above
+	 * LimitBody because a preflight carries no body.
+	 *
+	 * What actually matters is that this runs before the route chain: it sets
+	 * its headers on the way in, so the error envelopes written on the way out
+	 * carry them and a browser can read a 401 or 422 rather than reporting an
+	 * opaque network failure. It also has to intercept OPTIONS — no route
+	 * registers that verb and HandleMethodNotAllowed is on, so without this a
+	 * preflight is answered 405 and every cross-origin POST fails before it is
+	 * sent. Both are pinned by tests/Feature/cors.
+	 */
+	origins, err := middlewares.EffectiveOrigins(c.App().URL, c.App().CORSOrigins)
+	if err != nil {
+		return err
+	}
+
+	if len(origins) > 0 {
+		handler, err := middlewares.CORS(origins)
+		if err != nil {
+			return err
+		}
+
+		router.Use(handler)
+	}
+
+	router.Use(
 		// Before any handler reads a body.
 		middlewares.LimitBody(maxRequestBodyBytes),
 
@@ -187,6 +223,8 @@ func (provider *HTTPServiceProvider) GlobalMiddleware(router *gin.Engine, c *con
 		// route-level middleware and handler beneath it.
 		middlewares.ExceptionHandler(c.Logger()),
 	)
+
+	return nil
 }
 
 /*

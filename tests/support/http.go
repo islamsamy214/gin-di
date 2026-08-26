@@ -43,6 +43,23 @@ func AppRouter(t *testing.T) (*gin.Engine, *services.AuthService) {
 func AppRouterWithContainer(t *testing.T) (*gin.Engine, *container.Container) {
 	t.Helper()
 
+	return AppRouterWith(t, nil)
+}
+
+/*
+ * AppRouterWith builds the router after letting a test adjust the dependencies.
+ *
+ * The customize hook exists so a test can vary configuration that is read from
+ * the environment at boot — CORS origins, trusted proxies — without setting
+ * process environment variables. Those are global and unordered with respect to
+ * other tests, so a test that mutated them would leak into whatever ran next.
+ *
+ * @param t         The test.
+ * @param customize Applied to the dependencies before they are resolved; may be nil.
+ */
+func AppRouterWith(t *testing.T, customize func(*container.Config)) (*gin.Engine, *container.Container) {
+	t.Helper()
+
 	gin.SetMode(gin.TestMode)
 
 	// The validation rules are process-global on gin's shared validator, and the
@@ -57,13 +74,19 @@ func AppRouterWithContainer(t *testing.T) (*gin.Engine, *container.Container) {
 
 	db := testConnection(t)
 
-	resolved := container.New(container.Config{
+	config := container.Config{
 		App:    configs.NewAppConfig(),
 		Auth:   AuthService(t, TestSecret),
 		Users:  services.NewUserService(db),
 		DB:     db,
 		Logger: logger,
-	})
+	}
+
+	if customize != nil {
+		customize(&config)
+	}
+
+	resolved := container.New(config)
 
 	router, err := providers.NewHTTPServiceProvider().Engine(resolved)
 	if err != nil {

@@ -4,12 +4,13 @@ go 1.27
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.16.0
+	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
+	github.com/go-playground/validator/v10 v10.30.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.3
 	golang.org/x/crypto v0.55.0
-	github.com/go-playground/validator/v10 v10.30.3
 )
 
 require (
