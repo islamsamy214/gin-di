@@ -24,6 +24,7 @@ services:
     environment:
       WWWUSER: 1000
       GO_APP: 1
+      APP_HOST: 0.0.0.0
       IGNITION_LOCAL_SITES_PATH: "${PWD}"
     volumes:
       - ".:/web-app"
@@ -31,10 +32,13 @@ services:
       - "go-bins:/web-app/bin"
     networks:
       - web_app_net
+      - shared
       
 networks:
   web_app_net:
     driver: bridge
+  shared:
+    external: true
 
 volumes:
   app-pgsql:
