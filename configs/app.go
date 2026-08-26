@@ -77,6 +77,7 @@ func NewAppConfig() *AppConfig {
 		 * address that lands in the access log by sending X-Forwarded-For.
 		 * Set this to the reverse proxy actually in front of the app, and to
 		 * nothing at all when there isn't one.
+		 * 172.16.0.0/12 — or better, the container's /32, nginx/Traefik in the same compose network
 		 */
 		TrustedProxies: helpers.EnvSlice("APP_TRUSTED_PROXIES", []string{}),
 	}
